@@ -1,8 +1,8 @@
 package lang
 
 type ISeq interface {
-	first() interface{}
-	next() ISeq
-	more() ISeq
-	cons(interface{}) ISeq
+	First() interface{}
+	Next() ISeq
+	More() ISeq
+	Cons(interface{}) ISeq
 }

@@ -12,6 +12,8 @@ var emptyVectorPopError = errors.New("Can't pop empty vector.")
 // TODO:
 // PersistentVector extends APersistentVector, implements IObj, IEditableCollection, IKVReduce
 type PersistentVector struct {
+	*APersistentVector
+
 	cnt   int // count
 	shift uint
 	root  Node
@@ -223,9 +225,10 @@ func (v *PersistentVector) KVReduce(f IFn, init interface{}) interface{} {
 	return nil
 }
 
-// TODO
-// NOTE: extends ASeq, implements IChunkedSeq, Counted
+// NOTE: implements IChunkedSeq, Counted
 type ChunkedSeq struct {
+	*ASeq
+
 	vec    PersistentVector
 	node   []interface{}
 	i      int
@@ -237,17 +240,22 @@ func (c *ChunkedSeq) ChunkedFirst() IChunk {
 	return nil
 }
 
-// TODO
 func (c *ChunkedSeq) ChunkedNext() ISeq {
+	if c.i+len(c.node) < c.vec.cnt {
+		return &ChunkedSeq{vec: c.vec, i: c.i + len(c.node), offset: 0}
+	}
 	return nil
 }
 
-// TODO
 func (c *ChunkedSeq) ChunkedMore() ISeq {
-	return nil
+	s := c.ChunkedNext()
+	if s == nil {
+		// TODO: This could probably be replaced with an EmptyList struct.
+		return &EMPTY_PERSISTENT_LIST
+	}
+	return s
 }
 
-// NOTE (I don't understand how super(meta) works)
 func (c *ChunkedSeq) WithMeta(meta IPersistentMap) ChunkedSeq {
 	if meta == c.vec._meta {
 		return *c
@@ -356,3 +364,11 @@ func (v *PersistentVector) popTail(level uint, node Node) *Node {
 }
 
 // TODO: TransientVector
+type TransientVector struct {
+	cnt   int
+	shift int
+	root  Node
+	tail  []interface{}
+}
+
+// TODO...the rest of this
