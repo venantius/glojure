@@ -1,8 +1,9 @@
 package lang
 
-// NOTE: Extends Iterable, Associative, Counted
+// TODO: extends Iterable, not sure how to handle in Go
 type IPersistentMap interface {
-	assoc(interface{}, interface{}) IPersistentMap
+	Associative
+
 	assocEx(interface{}, interface{}) IPersistentMap
 	without(interface{}) IPersistentMap
 }

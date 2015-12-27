@@ -7,6 +7,9 @@ import (
 
 func main() {
 	fmt.Println("Fuck!")
-	fmt.Println(lang.Create(1))
+	v := lang.CreateVector(1)
+	fmt.Println(v.String())
+	y := v.Cons(3)
+	fmt.Println(y.String())
 
 }
