@@ -7,9 +7,10 @@ import (
 )
 
 var indexOutOfBoundsException = errors.New("Index out of bounds.")
+var emptyVectorPopError = errors.New("Can't pop empty vector.")
 
 // TODO:
-// PersistentVector extends APersistentVector, implements IObj, IEditableCollection, IReduce, IKVReduce
+// PersistentVector extends APersistentVector, implements IObj, IEditableCollection, IKVReduce
 type PersistentVector struct {
 	cnt   int // count
 	shift uint
@@ -65,7 +66,7 @@ func (v *PersistentVector) tailoff() int {
 }
 
 // TODO: Check this.
-func (v *PersistentVector) arrayFor(i int) []interface{} {
+func (v *PersistentVector) ArrayFor(i int) []interface{} {
 	if i < 0 || i >= v.cnt {
 		panic(indexOutOfBoundsException)
 	}
@@ -86,7 +87,7 @@ func (v *PersistentVector) Count() int {
 }
 
 func (v *PersistentVector) nth(i int) interface{} {
-	subsl := v.arrayFor(i)
+	subsl := v.ArrayFor(i)
 	return subsl[i&(NODE_SIZE-1)]
 }
 
@@ -199,3 +200,159 @@ func (v *PersistentVector) ChunkedSeq() IChunkedSeq {
 func (v *PersistentVector) Seq() ISeq {
 	return v.ChunkedSeq()
 }
+
+// TODO: Remove this
+type Iterator struct{}
+
+// TODO: This will be hard
+func (v *PersistentVector) rangedIterator(start int, end int) Iterator {
+	return Iterator{}
+}
+
+func (v *PersistentVector) Iterator() Iterator {
+	return v.rangedIterator(0, v.Count())
+}
+
+// TODO
+func (v *PersistentVector) Reduce(f IFn, init interface{}) interface{} {
+	return nil
+}
+
+// TODO
+func (v *PersistentVector) KVReduce(f IFn, init interface{}) interface{} {
+	return nil
+}
+
+// TODO
+// NOTE: extends ASeq, implements IChunkedSeq, Counted
+type ChunkedSeq struct {
+	vec    PersistentVector
+	node   []interface{}
+	i      int
+	offset int
+}
+
+// TODO
+func (c *ChunkedSeq) ChunkedFirst() IChunk {
+	return nil
+}
+
+// TODO
+func (c *ChunkedSeq) ChunkedNext() ISeq {
+	return nil
+}
+
+// TODO
+func (c *ChunkedSeq) ChunkedMore() ISeq {
+	return nil
+}
+
+// NOTE (I don't understand how super(meta) works)
+func (c *ChunkedSeq) WithMeta(meta IPersistentMap) ChunkedSeq {
+	if meta == c.vec._meta {
+		return *c
+	}
+	return ChunkedSeq{
+		vec:    c.vec.WithMeta(meta),
+		node:   c.node,
+		i:      c.i,
+		offset: c.offset,
+	}
+}
+
+func (c *ChunkedSeq) First() interface{} {
+	return c.node[c.offset]
+}
+
+// TODO: This won't work until we implement Cons
+func (c *ChunkedSeq) Next() ISeq {
+	if c.offset+1 < len(c.node) {
+		return nil
+		/*
+			ChunkedSeq{
+				vec:    c.vec,
+				node:   c.node,
+				i:      c.i,
+				offset: c.offset + 1,
+			}
+		*/
+	}
+	return c.ChunkedNext()
+}
+
+// Return the size of the chunked sequence.
+func (c *ChunkedSeq) Count() int {
+	return c.vec.cnt - (c.i + c.offset)
+}
+
+// Empty the vector's contents.
+func (v *PersistentVector) Empty() PersistentVector {
+	return EMPTY.WithMeta(v.Meta())
+}
+
+// TODO
+func (v *PersistentVector) Pop() PersistentVector {
+	if v.cnt == 0 {
+		panic(emptyVectorPopError)
+	}
+	if v.cnt == 1 {
+		return EMPTY.WithMeta(v.Meta())
+	}
+	if (v.cnt - v.tailoff()) > 1 {
+		newTail := make([]interface{}, len(v.tail)-1)
+		copy(v.tail, newTail) // NOTE: Figure this out
+		return PersistentVector{
+			_meta: v.Meta(),
+			cnt:   v.cnt - 1,
+			shift: v.shift,
+			root:  v.root,
+			tail:  newTail,
+		}
+	}
+	newTail := v.ArrayFor(v.cnt - 2)
+
+	_newroot := v.popTail(v.shift, v.root)
+	newroot := *_newroot
+
+	newshift := v.shift
+	if &_newroot == nil {
+		newroot = EMPTY_NODE
+	}
+	if v.shift > VECTOR_SHIFT && &newroot.array[1] == nil {
+		newroot = newroot.array[0].(Node)
+		newshift -= VECTOR_SHIFT
+	}
+	return PersistentVector{
+		_meta: v.Meta(),
+		cnt:   v.cnt - 1,
+		shift: newshift,
+		root:  newroot,
+		tail:  newTail,
+	}
+}
+
+func (v *PersistentVector) popTail(level uint, node Node) *Node {
+	subidx := ((v.cnt - 2) >> level) & (NODE_SIZE - 1)
+	if level > VECTOR_SHIFT {
+		newchild := v.popTail(level-VECTOR_SHIFT, node.array[subidx].(Node))
+		if &newchild == nil && subidx == 0 {
+			return nil
+		} else {
+			var arr []interface{}
+			copy(arr, node.array)
+			ret := Node{edit: v.root.edit, array: arr}
+			ret.array[subidx] = newchild
+			return &ret
+		}
+	} else if subidx == 0 {
+		return nil
+	} else {
+		var arr []interface{}
+		copy(arr, node.array)
+		ret := Node{edit: v.root.edit, array: arr}
+		ret.array[subidx] = nil
+		return &ret
+	}
+}
+
+// TODO: TransientVector

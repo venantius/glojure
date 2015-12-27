@@ -4,7 +4,7 @@ type IPersistentCollection interface {
 	Counted
 	Seqable
 
-	cons(o interface{}) IPersistentCollection
-	empty() IPersistentCollection
-	equiv(o interface{}) bool
+	Cons(o interface{}) IPersistentCollection
+	Empty() IPersistentCollection
+	Equiv(o interface{}) bool
 }
