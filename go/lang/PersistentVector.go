@@ -14,8 +14,7 @@ type Iterator struct{}
 type Iterable interface{}
 type List struct{}
 
-// TODO:
-// PersistentVector extends APersistentVector, implements IObj, IEditableCollection, IKVReduce
+// NOTE: Implements IObj, IEditableCollection, IKVReduce
 type PersistentVector struct {
 	*APersistentVector
 
@@ -85,18 +84,26 @@ func CreateVector(items ...interface{}) PersistentVector {
 	fmt.Println(reflect.TypeOf(items[0]))
 	switch items[0].(type) {
 	case IReduceInit:
-		createVectorFromIReduceInit(items[0].(IReduceInit))
+		ret = createVectorFromIReduceInit(items[0].(IReduceInit))
 	case ISeq:
-		createVectorFromISeq(items[0].(ISeq))
+		ret = createVectorFromISeq(items[0].(ISeq))
 	case Iterable:
-		createVectorFromIterable(items[0].(Iterable))
+		ret = createVectorFromIterable(items[0].(Iterable))
 	default:
-		createVectorFromInterfaceSlice(items)
+		ret = createVectorFromInterfaceSlice(items)
 	}
 	return ret
 }
 
-// TODO: public TransientVector asTransient()
+// TODO: Figure out initializer
+func (v *PersistentVector) AsTransient() TransientVector {
+	return TransientVector{
+		cnt:   v.cnt,
+		root:  v.root,
+		shift: v.shift,
+		tail:  v.tail,
+	}
+}
 
 // TODO: Check this.
 func (v *PersistentVector) tailoff() int {
@@ -472,10 +479,120 @@ func (v *PersistentVector) popTail(level uint, node Node) *Node {
 
 // TODO: TransientVector
 type TransientVector struct {
+	*AFn
+
 	cnt   int
-	shift int
+	shift uint
 	root  Node
 	tail  []interface{}
 }
 
 // TODO...the rest of this
+
+// TODO: Implementation
+func (t *TransientVector) Count() int {
+	t.ensureEditable()
+	return t.cnt
+}
+
+func (t *TransientVector) ensureEditable() {
+	// t.root.edit.get(), atomically in Java
+	// TODO: Could probably be accomplished using "sync/atomic" in Golang
+	if t.root.edit == nil {
+		panic(errors.New("Transient used after persistent! call"))
+	}
+}
+
+func (t *TransientVector) ensureEditableNode(node Node) Node {
+	if node.edit == t.root.edit {
+		return node
+	}
+	var arr []interface{}
+	copy(arr, node.array)
+	return Node{edit: t.root.edit, array: arr}
+}
+
+// TODO
+func editableRoot(node Node) Node {
+	return Node{}
+}
+
+// TODO
+func (t *TransientVector) Persistent() PersistentVector {
+	return PersistentVector{}
+}
+
+// TODO
+func editableTail(t []interface{}) []interface{} {
+	return nil
+}
+
+// TODO
+func (t *TransientVector) Conj(val interface{}) TransientVector {
+	return TransientVector{}
+}
+
+// TODO
+func (t *TransientVector) pushTail(level int, parent Node, tailnode Node) Node {
+	return Node{}
+}
+
+func (t *TransientVector) tailoff() int {
+	if t.cnt < NODE_SIZE {
+		return 0
+	}
+	// TODO: Bitshifts
+	return ((t.cnt - 1) >> VECTOR_SHIFT) << VECTOR_SHIFT
+}
+
+// TODO
+func (t *TransientVector) arrayFor(i int) []interface{} {
+	return nil
+}
+
+// TODO
+func (t *TransientVector) editableArrayFor(i int) []interface{} {
+	return nil
+}
+
+// TODO
+// NOTE: Function overloading
+func (t *TransientVector) ValAt(key interface{}, notFound interface{}) interface{} {
+	return nil
+}
+
+// TODO
+func (t *TransientVector) Invoke(arg1 interface{}) interface{} {
+	return nil
+}
+
+// TODO
+// NOTE: Funcion overloaded in Java
+func (t *TransientVector) Nth(i int, notFound interface{}) interface{} {
+	return nil
+}
+
+// TODO
+func (t *TransientVector) AssocN(i int, val interface{}) TransientVector {
+	return TransientVector{}
+}
+
+// TODO
+func (t *TransientVector) Assoc(key interface{}, val interface{}) TransientVector {
+	return TransientVector{}
+}
+
+// TODO
+func (t *TransientVector) doAssoc(level int, node Node, i int, val interface{}) Node {
+	return Node{}
+}
+
+// TODO
+func (t *TransientVector) Pop() TransientVector {
+	return TransientVector{}
+}
+
+// TODO
+func (t *TransientVector) popTail(level int, node Node) Node {
+	return Node{}
+}
