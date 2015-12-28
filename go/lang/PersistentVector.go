@@ -9,6 +9,11 @@ import (
 var indexOutOfBoundsException = errors.New("Index out of bounds.")
 var emptyVectorPopError = errors.New("Can't pop empty vector.")
 
+// TODO: Remove this
+type Iterator struct{}
+type Iterable interface{}
+type List struct{}
+
 // TODO:
 // PersistentVector extends APersistentVector, implements IObj, IEditableCollection, IKVReduce
 type PersistentVector struct {
@@ -39,8 +44,39 @@ var EMPTY = PersistentVector{cnt: 0, shift: VECTOR_SHIFT, root: EMPTY_NODE, tail
 
 // TODO: IFn TRANSIENT_VECTOR_CONJ
 
-func adopt(items []interface{}) {
-	// TODO
+// Return a new PersistentVector with the items passed in.
+func adopt(items []interface{}) PersistentVector {
+	return PersistentVector{
+		cnt:   len(items),
+		shift: VECTOR_SHIFT,
+		root:  EMPTY_NODE,
+		tail:  items,
+	}
+}
+
+// TODO
+func createVectorFromIReduceInit(items IReduceInit) PersistentVector {
+	return PersistentVector{}
+}
+
+// TODO
+func createVectorFromISeq(items ISeq) PersistentVector {
+	return PersistentVector{}
+}
+
+// TODO
+func createVectorFromList(list List) PersistentVector {
+	return PersistentVector{}
+}
+
+// TODO
+func createVectorFromIterable(items Iterable) PersistentVector {
+	return PersistentVector{}
+}
+
+// TODO
+func createVectorFromInterfaceSlice(items ...interface{}) PersistentVector {
+	return PersistentVector{}
 }
 
 // TODO: UNFINISHED
@@ -49,9 +85,13 @@ func CreateVector(items ...interface{}) PersistentVector {
 	fmt.Println(reflect.TypeOf(items[0]))
 	switch items[0].(type) {
 	case IReduceInit:
-		fmt.Println("IReduceInit")
+		createVectorFromIReduceInit(items[0].(IReduceInit))
+	case ISeq:
+		createVectorFromISeq(items[0].(ISeq))
+	case Iterable:
+		createVectorFromIterable(items[0].(Iterable))
 	default:
-		fmt.Println("unknown")
+		createVectorFromInterfaceSlice(items)
 	}
 	return ret
 }
@@ -158,11 +198,18 @@ func doAssoc(level uint, node Node, i int, val interface{}) Node {
 	return ret
 }
 
-// TODO
+// Return a new PersistentVector with new metadata.
 func (v *PersistentVector) WithMeta(meta IPersistentMap) PersistentVector {
-	return EMPTY
+	return PersistentVector{
+		_meta: meta,
+		cnt:   v.cnt,
+		shift: v.shift,
+		root:  v.root,
+		tail:  v.tail,
+	}
 }
 
+// Return the PersistentVector's metadata.
 func (v *PersistentVector) Meta() IPersistentMap {
 	return v._meta
 }
@@ -229,17 +276,20 @@ func (v *PersistentVector) Cons(val interface{}) PersistentVector {
 		tail:  []interface{}{val}}
 }
 
-// TODO
 func (v *PersistentVector) ChunkedSeq() IChunkedSeq {
-	return nil
+	if v.Count() == 0 {
+		return nil
+	}
+	return &ChunkedSeq{
+		vec:    *v,
+		i:      0,
+		offset: 0,
+	}
 }
 
 func (v *PersistentVector) Seq() ISeq {
 	return v.ChunkedSeq()
 }
-
-// TODO: Remove this
-type Iterator struct{}
 
 // TODO: This will be hard
 func (v *PersistentVector) rangedIterator(start int, end int) Iterator {
@@ -250,9 +300,31 @@ func (v *PersistentVector) Iterator() Iterator {
 	return v.rangedIterator(0, v.Count())
 }
 
-// TODO
-func (v *PersistentVector) Reduce(f IFn, init interface{}) interface{} {
-	return nil
+func (v *PersistentVector) Reduce(f IFn, init *interface{}) interface{} {
+	// Handle the method overloading
+	// TODO: Verify that this actually works.
+	if init == nil {
+		if v.cnt > 0 {
+			_temp := v.ArrayFor(0)[0]
+			init = &_temp
+		} else {
+			return f.Invoke()
+		}
+	}
+
+	step := 0
+	for i := 0; i < v.cnt; i += step {
+		array := v.ArrayFor(i)
+		// In Clojure these are pre-incremented
+		for j := 0; j < len(array); j++ {
+			init := f.Invoke(init, array[j])
+			if IsReduced(init) {
+				return init.(IDeref).Deref()
+			}
+		}
+		step = len(array)
+	}
+	return init
 }
 
 // TODO

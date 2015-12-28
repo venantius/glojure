@@ -4,7 +4,7 @@ type IChunkedSeq interface {
 	Sequential
 	ISeq
 
-	chunkedFirst() IChunk
-	chunkedNext() ISeq
-	chunkedMore() ISeq
+	ChunkedFirst() IChunk
+	ChunkedNext() ISeq
+	ChunkedMore() ISeq
 }

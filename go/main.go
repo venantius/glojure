@@ -11,5 +11,7 @@ func main() {
 	fmt.Println(v.String())
 	y := v.Cons(3)
 	fmt.Println(y.String())
+	z := v.AssocN(0, 2)
+	fmt.Println(z.String())
 
 }
