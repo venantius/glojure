@@ -103,6 +103,7 @@ func (v *PersistentVector) Nth(i int, notFound interface{}) interface{} {
 }
 
 // TODO: Follow up on this
+// NOTE: Is this even needed?
 func (v *PersistentVector) String() string {
 	s := "["
 	for i := 0; i < v.Count(); i++ {
@@ -115,12 +116,46 @@ func (v *PersistentVector) String() string {
 	return s
 }
 
-// TODO
-func (v *PersistentVector) AssocN(i int, val interface{}) {
+func (v *PersistentVector) AssocN(i int, val interface{}) PersistentVector {
+	if i >= 0 && i < v.cnt {
+		if i >= v.tailoff() {
+			newTail := make([]interface{}, len(v.tail))
+			copy(newTail, v.tail)
+			newTail[i&(NODE_SIZE-1)] = val
+			return PersistentVector{
+				_meta: v.Meta(),
+				cnt:   v.cnt,
+				shift: v.shift,
+				root:  v.root,
+				tail:  newTail,
+			}
+		}
+		return PersistentVector{
+			_meta: v.Meta(),
+			cnt:   v.cnt,
+			shift: v.shift,
+			root:  doAssoc(v.shift, v.root, i, val),
+			tail:  v.tail,
+		}
+	}
+	if i == v.cnt {
+		return v.Cons(val)
+	}
+	panic(indexOutOfBoundsException)
 }
 
-// TODO
-func (v *PersistentVector) doAssoc(level int, node Node, i int, val interface{}) {
+func doAssoc(level uint, node Node, i int, val interface{}) Node {
+	var arr []interface{}
+	copy(arr, node.array)
+	ret := Node{edit: node.edit, array: arr}
+	if level == 0 {
+		ret.array[i&(NODE_SIZE-1)] = val
+	} else {
+		// NOTE: Bitwise issues again.
+		subidx := (i >> level) & (NODE_SIZE - 1)
+		ret.array[subidx] = doAssoc(level-VECTOR_SHIFT, node.array[subidx].(Node), i, val)
+	}
+	return ret
 }
 
 // TODO
@@ -137,7 +172,7 @@ func (v *PersistentVector) newPath(edit interface{}, level uint, node Node) Node
 		return node
 	}
 	ret := Node{edit: edit}
-	ret.array[0] = v.newPath(edit, level-5, node)
+	ret.array[0] = v.newPath(edit, level-VECTOR_SHIFT, node)
 	return ret
 }
 
