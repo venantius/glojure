@@ -105,12 +105,11 @@ func (v *PersistentVector) AsTransient() TransientVector {
 	}
 }
 
-// TODO: Check this.
 func (v *PersistentVector) tailoff() int {
 	if v.cnt < NODE_SIZE {
 		return 0
 	}
-	// NOTE: I'm not totally clear on whether this is consistent with the Java version.
+	// TODO: I'm not totally clear on whether this is consistent with the Java version.
 	return ((v.cnt - 1) >> VECTOR_SHIFT) << VECTOR_SHIFT
 }
 
@@ -163,6 +162,7 @@ func (v *PersistentVector) String() string {
 	return s
 }
 
+// Assoc in a new value at the index.
 func (v *PersistentVector) AssocN(i int, val interface{}) PersistentVector {
 	if i >= 0 && i < v.cnt {
 		if i >= v.tailoff() {
@@ -191,6 +191,7 @@ func (v *PersistentVector) AssocN(i int, val interface{}) PersistentVector {
 	panic(indexOutOfBoundsException)
 }
 
+// Private function to handle assoc-ing at a lower level
 func doAssoc(level uint, node Node, i int, val interface{}) Node {
 	var arr []interface{}
 	copy(arr, node.array)
@@ -221,12 +222,12 @@ func (v *PersistentVector) Meta() IPersistentMap {
 	return v._meta
 }
 
-func (v *PersistentVector) newPath(edit interface{}, level uint, node Node) Node {
+func newPath(edit interface{}, level uint, node Node) Node {
 	if level == 0 {
 		return node
 	}
 	ret := Node{edit: edit}
-	ret.array[0] = v.newPath(edit, level-VECTOR_SHIFT, node)
+	ret.array[0] = newPath(edit, level-VECTOR_SHIFT, node)
 	return ret
 }
 
@@ -242,7 +243,7 @@ func (v *PersistentVector) pushTail(level uint, parent Node, tailnode Node) Node
 		if child != nil {
 			nodeToInsert = v.pushTail(level-VECTOR_SHIFT, child.(Node), tailnode)
 		} else {
-			nodeToInsert = v.newPath(v.root.edit, level-VECTOR_SHIFT, tailnode)
+			nodeToInsert = newPath(v.root.edit, level-VECTOR_SHIFT, tailnode)
 		}
 	}
 	ret.array[subidx] = nodeToInsert
@@ -270,7 +271,7 @@ func (v *PersistentVector) Cons(val interface{}) PersistentVector {
 	if (v.cnt >> VECTOR_SHIFT) > (1 << v.shift) {
 		newroot = Node{edit: v.root.edit} // defaults?
 		newroot.array[0] = v.root
-		newroot.array[1] = v.newPath(v.root.edit, v.shift, tailnode)
+		newroot.array[1] = newPath(v.root.edit, v.shift, tailnode)
 		newshift += 5
 	} else {
 		newroot = v.pushTail(v.shift, v.root, tailnode)
@@ -489,7 +490,6 @@ type TransientVector struct {
 
 // TODO...the rest of this
 
-// TODO: Implementation
 func (t *TransientVector) Count() int {
 	t.ensureEditable()
 	return t.cnt
@@ -512,29 +512,85 @@ func (t *TransientVector) ensureEditableNode(node Node) Node {
 	return Node{edit: t.root.edit, array: arr}
 }
 
-// TODO
 func editableRoot(node Node) Node {
-	return Node{}
+	var arr []interface{}
+	copy(arr, node.array)
+	return Node{
+		// TODO: Is new AtomicReference<Thread>(Thread.currentTHread()) in Clojure
+		edit:  node.edit,
+		array: arr,
+	}
 }
 
-// TODO
 func (t *TransientVector) Persistent() PersistentVector {
-	return PersistentVector{}
+	t.ensureEditable()
+	// TODO: set root.edit to null
+	trimmedTail := make([]interface{}, t.cnt-t.tailoff())
+	copy(trimmedTail, t.tail)
+	return PersistentVector{
+		cnt:   t.cnt,
+		shift: t.shift,
+		root:  t.root,
+		tail:  trimmedTail,
+	}
 }
 
-// TODO
 func editableTail(t []interface{}) []interface{} {
-	return nil
+	arr := make([]interface{}, NODE_SIZE)
+	copy(arr, t)
+	return arr
 }
 
-// TODO
 func (t *TransientVector) Conj(val interface{}) TransientVector {
-	return TransientVector{}
+	t.ensureEditable()
+	i := t.cnt
+	if (i - t.tailoff()) < NODE_SIZE {
+		t.tail[i&(NODE_SIZE-1)] = val
+		t.cnt++
+		return *t
+	}
+	var newroot Node
+	tailnode := Node{
+		edit:  t.root.edit,
+		array: t.tail,
+	}
+	tail := make([]interface{}, NODE_SIZE)
+	tail[0] = val
+	newshift := t.shift
+	// TODO: review bit shift
+	if (t.cnt >> VECTOR_SHIFT) > (1 << t.shift) {
+		newroot = Node{edit: t.root.edit}
+		newroot.array[0] = t.root
+		newroot.array[1] = newPath(t.root.edit, t.shift, tailnode)
+		newshift += 5
+	} else {
+		newroot = t.pushTail(t.shift, t.root, tailnode)
+	}
+	t.root = newroot
+	t.shift = newshift
+	t.cnt++
+	return *t
 }
 
-// TODO
-func (t *TransientVector) pushTail(level int, parent Node, tailnode Node) Node {
-	return Node{}
+func (t *TransientVector) pushTail(level uint, parent Node, tailnode Node) Node {
+	// TODO: Call this in a goroutine?
+	parent = t.ensureEditableNode(parent)
+	// TODO: bit shifting?
+	subidx := ((t.cnt - 1) >> level) & (NODE_SIZE - 1)
+	ret := parent
+	var nodeToInsert Node
+	if level == VECTOR_SHIFT {
+		nodeToInsert = tailnode
+	} else {
+		child := parent.array[subidx]
+		if child != nil {
+			nodeToInsert = t.pushTail(level-VECTOR_SHIFT, child.(Node), tailnode)
+		} else {
+			nodeToInsert = newPath(t.root.edit, level-VECTOR_SHIFT, tailnode)
+		}
+	}
+	ret.array[subidx] = nodeToInsert
+	return ret
 }
 
 func (t *TransientVector) tailoff() int {
@@ -545,36 +601,87 @@ func (t *TransientVector) tailoff() int {
 	return ((t.cnt - 1) >> VECTOR_SHIFT) << VECTOR_SHIFT
 }
 
-// TODO
 func (t *TransientVector) arrayFor(i int) []interface{} {
-	return nil
+	if i >= 0 && i < t.cnt {
+		if i >= t.tailoff() {
+			return t.tail
+		}
+		node := t.root
+		for level := t.shift; level > 0; level -= VECTOR_SHIFT {
+			// TODO: bitshift
+			node = node.array[(i>>level)&(NODE_SIZE-1)].(Node)
+		}
+		return node.array
+	}
+	panic(indexOutOfBoundsException)
 }
 
 // TODO
 func (t *TransientVector) editableArrayFor(i int) []interface{} {
-	return nil
+	if i >= 0 && i < t.cnt {
+		if i >= t.tailoff() {
+			return t.tail
+		}
+		node := t.root
+		for level := t.shift; level > 0; level -= VECTOR_SHIFT {
+			// TODO: bit shift
+			node = t.ensureEditableNode(node.array[(i>>level)&(NODE_SIZE-1)].(Node))
+		}
+		return node.array
+	}
+	panic(indexOutOfBoundsException)
 }
 
-// TODO
 // NOTE: Function overloading
+// Retrieve the value at the corresponding index of this TransientVector
 func (t *TransientVector) ValAt(key interface{}, notFound interface{}) interface{} {
-	return nil
+	t.ensureEditable()
+	switch key.(type) {
+	case int:
+		i := key.(int)
+		if i >= 0 && i < t.cnt {
+			return t.Nth(i, nil)
+		}
+	}
+	return notFound
 }
 
-// TODO
 func (t *TransientVector) Invoke(arg1 interface{}) interface{} {
-	return nil
+	switch arg1.(type) {
+	case int:
+		return t.Nth(arg1.(int), nil)
+	default:
+		panic(errors.New("Key must be integer"))
+	}
 }
 
-// TODO
-// NOTE: Funcion overloaded in Java
+// NOTE: Function overloaded in Java
+// Return the value at the Nth index of the TransientVector.
 func (t *TransientVector) Nth(i int, notFound interface{}) interface{} {
-	return nil
+	t.ensureEditable()
+	node := t.arrayFor(i)
+	if i >= 0 && i < t.Count() {
+		return node[i&(NODE_SIZE-1)]
+	} else {
+		return notFound
+	}
 }
 
 // TODO
 func (t *TransientVector) AssocN(i int, val interface{}) TransientVector {
-	return TransientVector{}
+	t.ensureEditable()
+	if i >= 0 && i < t.cnt {
+		if i >= t.tailoff() {
+			t.tail[i&(NODE_SIZE-1)] = val
+			return *t
+		}
+		t.root = t.doAssoc(t.shift, t.root, i, val)
+		return *t
+	}
+	if i == t.cnt {
+		return t.Conj(val)
+	}
+	panic(indexOutOfBoundsException)
 }
 
 // TODO
@@ -583,7 +690,7 @@ func (t *TransientVector) Assoc(key interface{}, val interface{}) TransientVecto
 }
 
 // TODO
-func (t *TransientVector) doAssoc(level int, node Node, i int, val interface{}) Node {
+func (t *TransientVector) doAssoc(level uint, node Node, i int, val interface{}) Node {
 	return Node{}
 }
 
