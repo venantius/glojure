@@ -27,8 +27,14 @@ type PersistentVector struct {
 
 // TODO: Implements Serializable
 type Node struct {
-	// TODO: edit AtomicReference ??
-	edit  interface{}
+	/*
+		NOTE: In Clojure, `edit` is an AtomicReference<Thread>. Since Clojure 1.7.0
+		transients have not had their thread-local checks enforced, however, and
+		Go lacks an interface for managing threads directly anyways. Transients do
+		still use the edit field to check for whether a `persistent` call has been
+		made, and so we use a simple boolean to capture that here.
+	*/
+	edit  bool
 	array []interface{}
 }
 
@@ -37,7 +43,7 @@ const (
 	NODE_SIZE    = 32
 )
 
-var EMPTY_NODE = Node{array: make([]interface{}, NODE_SIZE)}
+var EMPTY_NODE = Node{edit: false, array: make([]interface{}, NODE_SIZE)}
 
 var EMPTY = PersistentVector{cnt: 0, shift: VECTOR_SHIFT, root: EMPTY_NODE, tail: make([]interface{}, 0)}
 
@@ -74,8 +80,12 @@ func createVectorFromIterable(items Iterable) PersistentVector {
 }
 
 // TODO
-func createVectorFromInterfaceSlice(items ...interface{}) PersistentVector {
-	return PersistentVector{}
+func createVectorFromInterfaceSlice(items []interface{}) PersistentVector {
+	ret := EMPTY.AsTransient()
+	for _, item := range items {
+		ret = ret.Conj(item)
+	}
+	return ret.Persistent()
 }
 
 // TODO: UNFINISHED
@@ -87,21 +97,20 @@ func CreateVector(items ...interface{}) PersistentVector {
 		ret = createVectorFromIReduceInit(items[0].(IReduceInit))
 	case ISeq:
 		ret = createVectorFromISeq(items[0].(ISeq))
-	case Iterable:
-		ret = createVectorFromIterable(items[0].(Iterable))
+	// case Iterable:
+	// 	ret = createVectorFromIterable(items[0].(Iterable))
 	default:
 		ret = createVectorFromInterfaceSlice(items)
 	}
 	return ret
 }
 
-// TODO: Figure out initializer
 func (v *PersistentVector) AsTransient() TransientVector {
 	return TransientVector{
 		cnt:   v.cnt,
-		root:  v.root,
+		root:  editableRoot(v.root),
 		shift: v.shift,
-		tail:  v.tail,
+		tail:  editableTail(v.tail),
 	}
 }
 
@@ -150,7 +159,7 @@ func (v *PersistentVector) Nth(i int, notFound interface{}) interface{} {
 
 // TODO: Follow up on this
 // NOTE: Is this even needed?
-func (v *PersistentVector) String() string {
+func (v PersistentVector) String() string {
 	s := "["
 	for i := 0; i < v.Count(); i++ {
 		if i > 0 {
@@ -222,7 +231,7 @@ func (v *PersistentVector) Meta() IPersistentMap {
 	return v._meta
 }
 
-func newPath(edit interface{}, level uint, node Node) Node {
+func newPath(edit bool, level uint, node Node) Node {
 	if level == 0 {
 		return node
 	}
@@ -235,7 +244,7 @@ func (v *PersistentVector) pushTail(level uint, parent Node, tailnode Node) Node
 	// NOTE: bitshifts require review
 	subidx := ((v.cnt - 1) >> level) & NODE_SIZE
 	ret := Node{edit: parent.edit, array: *&parent.array}
-	nodeToInsert := Node{}
+	nodeToInsert := Node{edit: false}
 	if level == VECTOR_SHIFT {
 		nodeToInsert = tailnode
 	} else {
@@ -263,7 +272,7 @@ func (v *PersistentVector) Cons(val interface{}) PersistentVector {
 			tail:  newTail,
 		}
 	}
-	newroot := Node{}
+	newroot := Node{edit: false}
 	tailnode := Node{v.root.edit, v.tail}
 	newshift := v.shift
 	fmt.Println(tailnode)
@@ -488,18 +497,15 @@ type TransientVector struct {
 	tail  []interface{}
 }
 
-// TODO...the rest of this
-
 func (t *TransientVector) Count() int {
 	t.ensureEditable()
 	return t.cnt
 }
 
 func (t *TransientVector) ensureEditable() {
-	// t.root.edit.get(), atomically in Java
-	// TODO: Could probably be accomplished using "sync/atomic" in Golang
-	if t.root.edit == nil {
-		panic(errors.New("Transient used after persistent! call"))
+	// NOTE: t.root.edit.get(), atomically in Java
+	if t.root.edit == false {
+		panic("Transient used after persistent! call")
 	}
 }
 
@@ -517,14 +523,14 @@ func editableRoot(node Node) Node {
 	copy(arr, node.array)
 	return Node{
 		// TODO: Is new AtomicReference<Thread>(Thread.currentTHread()) in Clojure
-		edit:  node.edit,
+		edit:  true,
 		array: arr,
 	}
 }
 
 func (t *TransientVector) Persistent() PersistentVector {
 	t.ensureEditable()
-	// TODO: set root.edit to null
+	t.root.edit = false
 	trimmedTail := make([]interface{}, t.cnt-t.tailoff())
 	copy(trimmedTail, t.tail)
 	return PersistentVector{
@@ -667,7 +673,6 @@ func (t *TransientVector) Nth(i int, notFound interface{}) interface{} {
 	}
 }
 
-// TODO
 func (t *TransientVector) AssocN(i int, val interface{}) TransientVector {
 	t.ensureEditable()
 	if i >= 0 && i < t.cnt {
@@ -684,22 +689,81 @@ func (t *TransientVector) AssocN(i int, val interface{}) TransientVector {
 	panic(indexOutOfBoundsException)
 }
 
-// TODO
+// Associate a new value at the given key. Key must be an integer.
 func (t *TransientVector) Assoc(key interface{}, val interface{}) TransientVector {
-	return TransientVector{}
+	switch key.(type) {
+	case int:
+		return t.AssocN(key.(int), val)
+	}
+	panic("Key must be integer")
 }
 
-// TODO
 func (t *TransientVector) doAssoc(level uint, node Node, i int, val interface{}) Node {
-	return Node{}
+	node = t.ensureEditableNode(node)
+	ret := node
+	if level == 0 {
+		// TODO -- all of these NODE_SIZE-1s should be pulled into a constant to eliminate extra work
+		ret.array[i&(NODE_SIZE-1)] = val
+	} else {
+		subidx := (i >> level) & (NODE_SIZE - 1)
+		ret.array[subidx] = t.doAssoc(level-VECTOR_SHIFT, node.array[subidx].(Node), i, val)
+	}
+	return ret
 }
 
 // TODO
 func (t *TransientVector) Pop() TransientVector {
-	return TransientVector{}
+	t.ensureEditable()
+	if t.cnt == 0 {
+		panic("Can't pop empty vector")
+	}
+	if t.cnt == 1 {
+		t.cnt = 0
+		return *t
+	}
+	i := t.cnt - 1
+	if (i & (NODE_SIZE - 1)) > 0 {
+		t.cnt--
+		return *t
+	}
+
+	newtail := t.editableArrayFor(t.cnt - 2)
+	newroot := t.popTail(t.shift, t.root)
+	newshift := t.shift
+	// NOTE: suspicious of this &newroot
+	if &newroot == nil {
+		newroot = Node{edit: t.root.edit}
+	}
+	if t.shift > VECTOR_SHIFT && newroot.array[1] == nil {
+		newroot = t.ensureEditableNode(newroot.array[0].(Node))
+		newshift -= VECTOR_SHIFT
+	}
+	t.root = newroot
+	t.shift = newshift
+	t.cnt--
+	t.tail = newtail
+	return *t
 }
 
 // TODO
-func (t *TransientVector) popTail(level int, node Node) Node {
-	return Node{}
+func (t *TransientVector) popTail(level uint, node Node) Node {
+	node = t.ensureEditableNode(node)
+	var nilreturn Node
+	subidx := ((t.cnt - 2) >> level) & (NODE_SIZE - 1)
+	if level > VECTOR_SHIFT {
+		newchild := t.popTail(level-VECTOR_SHIFT, node.array[subidx].(Node))
+		if &newchild == nil && subidx == 0 {
+			return nilreturn
+		} else {
+			ret := node
+			ret.array[subidx] = newchild
+			return ret
+		}
+	} else if subidx == 0 {
+		return nilreturn
+	} else {
+		ret := node
+		ret.array[subidx] = nil
+		return ret
+	}
 }

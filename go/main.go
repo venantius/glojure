@@ -7,11 +7,12 @@ import (
 
 func main() {
 	fmt.Println("Fuck!")
-	v := lang.CreateVector(1)
+	v := lang.CreateVector(1, 2)
 	fmt.Println(v.String())
 	y := v.Cons(3)
 	fmt.Println(y.String())
-	z := v.AssocN(0, 2)
+	z := v.AssocN(0, "other")
 	fmt.Println(z.String())
+	fmt.Println(z)
 
 }
