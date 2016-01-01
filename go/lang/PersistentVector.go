@@ -2,8 +2,7 @@ package lang
 
 import (
 	"errors"
-	"fmt"     // really just for debugging
-	"reflect" // this too.
+	"fmt" // really just for debugging
 )
 
 var indexOutOfBoundsException = errors.New("Index out of bounds.")
@@ -12,7 +11,21 @@ var emptyVectorPopError = errors.New("Can't pop empty vector.")
 // TODO: Remove this
 type Iterator struct{}
 type Iterable interface{}
+
+// TODO: All of this is tied to java.util.list ;; is there an analog for this in Go that we'd actually use?
 type List struct{}
+
+func (l *List) Size() int {
+	return 0
+}
+
+func (l *List) ToArray() []interface{} {
+	return make([]interface{}, 5)
+}
+
+func (l *List) Get(i int) interface{} {
+	return 5
+}
 
 // NOTE: Implements IObj, IEditableCollection, IKVReduce
 type PersistentVector struct {
@@ -122,17 +135,35 @@ func createVectorFromISeq(items ISeq) PersistentVector {
 	}
 }
 
-// TODO
 func createVectorFromList(list List) PersistentVector {
-	return PersistentVector{}
+	size := list.Size()
+	if size <= NODE_SIZE {
+		return PersistentVector{
+			cnt:   size,
+			shift: VECTOR_SHIFT,
+			root:  EMPTY_NODE,
+			tail:  list.ToArray(),
+		}
+	}
+	ret := EMPTY.AsTransient()
+	for i := 0; i < size; i++ {
+		ret = ret.Conj(list.Get(i))
+	}
+	return ret.Persistent()
 }
 
-// TODO
+// TODO: Review idiomatic iterators in Go, don't try to copy this from Java.
 func createVectorFromIterable(items Iterable) PersistentVector {
-	return PersistentVector{}
+	// TODO: if arraylist, use createVectorFromList
+	// iter := items.Iterator()
+	ret := EMPTY.AsTransient()
+	// TODO: this should be a while loop.
+	// for iter.HasNext() {
+	//	ret = ret.Conj(iter.Next())
+	//}
+	return ret.Persistent()
 }
 
-// TODO
 func createVectorFromInterfaceSlice(items []interface{}) PersistentVector {
 	ret := EMPTY.AsTransient()
 	for _, item := range items {
@@ -141,15 +172,16 @@ func createVectorFromInterfaceSlice(items []interface{}) PersistentVector {
 	return ret.Persistent()
 }
 
-// TODO: UNFINISHED
+// General initializer; does type checking and dispatches to appropriate
+// constructor.
 func CreateVector(items ...interface{}) PersistentVector {
-	ret := *&EMPTY
-	fmt.Println(reflect.TypeOf(items[0]))
+	ret := EMPTY
 	switch items[0].(type) {
 	case IReduceInit:
 		ret = createVectorFromIReduceInit(items[0].(IReduceInit))
 	case ISeq:
 		ret = createVectorFromISeq(items[0].(ISeq))
+	// TODO: uncomment me once we understand iterables in Go.
 	// case Iterable:
 	// 	ret = createVectorFromIterable(items[0].(Iterable))
 	default:
