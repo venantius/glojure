@@ -25,7 +25,7 @@ type PersistentVector struct {
 	_meta IPersistentMap
 }
 
-// TODO: Implements Serializable
+// NOTE: Implements Serializable
 type Node struct {
 	/*
 		NOTE: In Clojure, `edit` is an AtomicReference<Thread>. Since Clojure 1.7.0
@@ -41,13 +41,32 @@ type Node struct {
 const (
 	VECTOR_SHIFT = 5
 	NODE_SIZE    = 32
+	NODE_END_IDX = NODE_SIZE - 1
 )
 
 var EMPTY_NODE = Node{edit: false, array: make([]interface{}, NODE_SIZE)}
 
 var EMPTY = PersistentVector{cnt: 0, shift: VECTOR_SHIFT, root: EMPTY_NODE, tail: make([]interface{}, 0)}
 
-// TODO: IFn TRANSIENT_VECTOR_CONJ
+/*
+NOTE: This is just a small anonymous class in Java
+*/
+type transientVectorConj struct {
+	AFn
+	IFn // maybe?
+}
+
+// Original method is overloaded.
+func (t *transientVectorConj) Invoke(args ...interface{}) interface{} {
+	coll := args[0]
+	val := args[1]
+	if val == nil {
+		return coll
+	}
+	return coll.(ITransientVector).Conj(val)
+}
+
+var TRANSIENT_VECTOR_CONJ = transientVectorConj{}
 
 // Return a new PersistentVector with the items passed in.
 func adopt(items []interface{}) PersistentVector {
@@ -59,14 +78,48 @@ func adopt(items []interface{}) PersistentVector {
 	}
 }
 
-// TODO
 func createVectorFromIReduceInit(items IReduceInit) PersistentVector {
-	return PersistentVector{}
+	ret := EMPTY.AsTransient()
+	items.ReduceWithInit(&TRANSIENT_VECTOR_CONJ, ret)
+	return ret.Persistent()
 }
 
-// TODO
 func createVectorFromISeq(items ISeq) PersistentVector {
-	return PersistentVector{}
+	arr := make([]interface{}, NODE_SIZE)
+	i := 0
+	for ; items != nil && i < NODE_SIZE; items = items.Next() {
+		arr[i] = items.First()
+		i++
+	}
+	if items != nil {
+		start := PersistentVector{
+			cnt:   NODE_SIZE,
+			root:  EMPTY_NODE,
+			shift: VECTOR_SHIFT,
+			tail:  arr,
+		}
+		ret := start.AsTransient()
+		for ; items != nil; items = items.Next() {
+			ret = ret.Conj(items.First())
+		}
+		return ret.Persistent()
+	} else if i == 32 {
+		return PersistentVector{
+			cnt:   NODE_SIZE,
+			root:  EMPTY_NODE,
+			shift: VECTOR_SHIFT,
+			tail:  arr,
+		}
+	} else {
+		arr2 := make([]interface{}, i)
+		copy(arr2, arr)
+		return PersistentVector{
+			cnt:   i,
+			shift: VECTOR_SHIFT,
+			root:  EMPTY_NODE,
+			tail:  arr2,
+		}
+	}
 }
 
 // TODO
@@ -122,7 +175,6 @@ func (v *PersistentVector) tailoff() int {
 	return ((v.cnt - 1) >> VECTOR_SHIFT) << VECTOR_SHIFT
 }
 
-// TODO: Check this.
 func (v *PersistentVector) ArrayFor(i int) []interface{} {
 	if i < 0 || i >= v.cnt {
 		panic(indexOutOfBoundsException)
@@ -133,7 +185,7 @@ func (v *PersistentVector) ArrayFor(i int) []interface{} {
 	n := *&v.root
 	for level := v.shift; level > 0; level -= VECTOR_SHIFT {
 		// NOTE: bitshift is probably wrong here as well.
-		n = n.array[(i>>level)&(NODE_SIZE-1)].(Node)
+		n = n.array[(i>>level)&(NODE_END_IDX)].(Node)
 	}
 	return n.array
 }
@@ -145,7 +197,7 @@ func (v *PersistentVector) Count() int {
 
 func (v *PersistentVector) nth(i int) interface{} {
 	subsl := v.ArrayFor(i)
-	return subsl[i&(NODE_SIZE-1)]
+	return subsl[i&(NODE_END_IDX)]
 }
 
 // Retrieve the nth item in the vector. If the index being retrieved is beyond
@@ -177,7 +229,7 @@ func (v *PersistentVector) AssocN(i int, val interface{}) PersistentVector {
 		if i >= v.tailoff() {
 			newTail := make([]interface{}, len(v.tail))
 			copy(newTail, v.tail)
-			newTail[i&(NODE_SIZE-1)] = val
+			newTail[i&(NODE_END_IDX)] = val
 			return PersistentVector{
 				_meta: v.Meta(),
 				cnt:   v.cnt,
@@ -206,10 +258,10 @@ func doAssoc(level uint, node Node, i int, val interface{}) Node {
 	copy(arr, node.array)
 	ret := Node{edit: node.edit, array: arr}
 	if level == 0 {
-		ret.array[i&(NODE_SIZE-1)] = val
+		ret.array[i&(NODE_END_IDX)] = val
 	} else {
 		// NOTE: Bitwise issues again.
-		subidx := (i >> level) & (NODE_SIZE - 1)
+		subidx := (i >> level) & (NODE_END_IDX)
 		ret.array[subidx] = doAssoc(level-VECTOR_SHIFT, node.array[subidx].(Node), i, val)
 	}
 	return ret
@@ -281,7 +333,7 @@ func (v *PersistentVector) Cons(val interface{}) PersistentVector {
 		newroot = Node{edit: v.root.edit} // defaults?
 		newroot.array[0] = v.root
 		newroot.array[1] = newPath(v.root.edit, v.shift, tailnode)
-		newshift += 5
+		newshift += VECTOR_SHIFT
 	} else {
 		newroot = v.pushTail(v.shift, v.root, tailnode)
 	}
@@ -319,7 +371,7 @@ func (v *PersistentVector) Iterator() Iterator {
 
 func (v *PersistentVector) Reduce(f IFn, init *interface{}) interface{} {
 	// Handle the method overloading
-	// TODO: Verify that this actually works.
+	// NOTE: This method's overloading is somewhat complex, so we'll be careful.
 	if init == nil {
 		if v.cnt > 0 {
 			_temp := v.ArrayFor(0)[0]
@@ -430,7 +482,6 @@ func (v *PersistentVector) Empty() PersistentVector {
 	return EMPTY.WithMeta(v.Meta())
 }
 
-// TODO
 func (v *PersistentVector) Pop() PersistentVector {
 	if v.cnt == 0 {
 		panic(emptyVectorPopError)
@@ -451,6 +502,7 @@ func (v *PersistentVector) Pop() PersistentVector {
 	}
 	newTail := v.ArrayFor(v.cnt - 2)
 
+	// TODO: Figure out the pointer v. struct return value issue (see NOTES)
 	_newroot := v.popTail(v.shift, v.root)
 	newroot := *_newroot
 
@@ -472,7 +524,7 @@ func (v *PersistentVector) Pop() PersistentVector {
 }
 
 func (v *PersistentVector) popTail(level uint, node Node) *Node {
-	subidx := ((v.cnt - 2) >> level) & (NODE_SIZE - 1)
+	subidx := ((v.cnt - 2) >> level) & (NODE_END_IDX)
 	if level > VECTOR_SHIFT {
 		newchild := v.popTail(level-VECTOR_SHIFT, node.array[subidx].(Node))
 		if &newchild == nil && subidx == 0 {
@@ -495,7 +547,7 @@ func (v *PersistentVector) popTail(level uint, node Node) *Node {
 	}
 }
 
-// TODO: TransientVector
+// NOTE: Implements ITransientVector, Counted
 type TransientVector struct {
 	*AFn
 
@@ -530,7 +582,6 @@ func editableRoot(node Node) Node {
 	var arr []interface{}
 	copy(arr, node.array)
 	return Node{
-		// TODO: Is new AtomicReference<Thread>(Thread.currentTHread()) in Clojure
 		edit:  true,
 		array: arr,
 	}
@@ -559,7 +610,7 @@ func (t *TransientVector) Conj(val interface{}) TransientVector {
 	t.ensureEditable()
 	i := t.cnt
 	if (i - t.tailoff()) < NODE_SIZE {
-		t.tail[i&(NODE_SIZE-1)] = val
+		t.tail[i&(NODE_END_IDX)] = val
 		t.cnt++
 		return *t
 	}
@@ -576,7 +627,7 @@ func (t *TransientVector) Conj(val interface{}) TransientVector {
 		newroot = Node{edit: t.root.edit}
 		newroot.array[0] = t.root
 		newroot.array[1] = newPath(t.root.edit, t.shift, tailnode)
-		newshift += 5
+		newshift += VECTOR_SHIFT
 	} else {
 		newroot = t.pushTail(t.shift, t.root, tailnode)
 	}
@@ -587,10 +638,9 @@ func (t *TransientVector) Conj(val interface{}) TransientVector {
 }
 
 func (t *TransientVector) pushTail(level uint, parent Node, tailnode Node) Node {
-	// TODO: Call this in a goroutine?
 	parent = t.ensureEditableNode(parent)
 	// TODO: bit shifting?
-	subidx := ((t.cnt - 1) >> level) & (NODE_SIZE - 1)
+	subidx := ((t.cnt - 1) >> level) & (NODE_END_IDX)
 	ret := parent
 	var nodeToInsert Node
 	if level == VECTOR_SHIFT {
@@ -623,14 +673,13 @@ func (t *TransientVector) arrayFor(i int) []interface{} {
 		node := t.root
 		for level := t.shift; level > 0; level -= VECTOR_SHIFT {
 			// TODO: bitshift
-			node = node.array[(i>>level)&(NODE_SIZE-1)].(Node)
+			node = node.array[(i>>level)&(NODE_END_IDX)].(Node)
 		}
 		return node.array
 	}
 	panic(indexOutOfBoundsException)
 }
 
-// TODO
 func (t *TransientVector) editableArrayFor(i int) []interface{} {
 	if i >= 0 && i < t.cnt {
 		if i >= t.tailoff() {
@@ -639,7 +688,7 @@ func (t *TransientVector) editableArrayFor(i int) []interface{} {
 		node := t.root
 		for level := t.shift; level > 0; level -= VECTOR_SHIFT {
 			// TODO: bit shift
-			node = t.ensureEditableNode(node.array[(i>>level)&(NODE_SIZE-1)].(Node))
+			node = t.ensureEditableNode(node.array[(i>>level)&(NODE_END_IDX)].(Node))
 		}
 		return node.array
 	}
@@ -675,7 +724,7 @@ func (t *TransientVector) Nth(i int, notFound interface{}) interface{} {
 	t.ensureEditable()
 	node := t.arrayFor(i)
 	if i >= 0 && i < t.Count() {
-		return node[i&(NODE_SIZE-1)]
+		return node[i&(NODE_END_IDX)]
 	} else {
 		return notFound
 	}
@@ -685,7 +734,7 @@ func (t *TransientVector) AssocN(i int, val interface{}) TransientVector {
 	t.ensureEditable()
 	if i >= 0 && i < t.cnt {
 		if i >= t.tailoff() {
-			t.tail[i&(NODE_SIZE-1)] = val
+			t.tail[i&(NODE_END_IDX)] = val
 			return *t
 		}
 		t.root = t.doAssoc(t.shift, t.root, i, val)
@@ -710,16 +759,14 @@ func (t *TransientVector) doAssoc(level uint, node Node, i int, val interface{})
 	node = t.ensureEditableNode(node)
 	ret := node
 	if level == 0 {
-		// TODO -- all of these NODE_SIZE-1s should be pulled into a constant to eliminate extra work
-		ret.array[i&(NODE_SIZE-1)] = val
+		ret.array[i&(NODE_END_IDX)] = val
 	} else {
-		subidx := (i >> level) & (NODE_SIZE - 1)
+		subidx := (i >> level) & (NODE_END_IDX)
 		ret.array[subidx] = t.doAssoc(level-VECTOR_SHIFT, node.array[subidx].(Node), i, val)
 	}
 	return ret
 }
 
-// TODO
 func (t *TransientVector) Pop() TransientVector {
 	t.ensureEditable()
 	if t.cnt == 0 {
@@ -730,7 +777,7 @@ func (t *TransientVector) Pop() TransientVector {
 		return *t
 	}
 	i := t.cnt - 1
-	if (i & (NODE_SIZE - 1)) > 0 {
+	if (i & (NODE_END_IDX)) > 0 {
 		t.cnt--
 		return *t
 	}
@@ -738,7 +785,7 @@ func (t *TransientVector) Pop() TransientVector {
 	newtail := t.editableArrayFor(t.cnt - 2)
 	newroot := t.popTail(t.shift, t.root)
 	newshift := t.shift
-	// NOTE: suspicious of this &newroot
+	// NOTE: suspicious of this &newroot (See NOTE on pointers v. structs earlier)
 	if &newroot == nil {
 		newroot = Node{edit: t.root.edit}
 	}
@@ -753,11 +800,10 @@ func (t *TransientVector) Pop() TransientVector {
 	return *t
 }
 
-// TODO
 func (t *TransientVector) popTail(level uint, node Node) Node {
 	node = t.ensureEditableNode(node)
 	var nilreturn Node
-	subidx := ((t.cnt - 2) >> level) & (NODE_SIZE - 1)
+	subidx := ((t.cnt - 2) >> level) & (NODE_END_IDX)
 	if level > VECTOR_SHIFT {
 		newchild := t.popTail(level-VECTOR_SHIFT, node.array[subidx].(Node))
 		if &newchild == nil && subidx == 0 {
