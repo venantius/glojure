@@ -3,6 +3,6 @@ package lang
 type IChunk interface {
 	Indexed
 
-	dropFirst() IChunk
-	reduce(f IFn, start interface{}) interface{}
+	DropFirst() IChunk
+	Reduce(f IFn, start interface{}) interface{}
 }

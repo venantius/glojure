@@ -1,5 +1,5 @@
 package lang
 
 type Counted interface {
-	count() int
+	Count() int
 }

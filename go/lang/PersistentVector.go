@@ -157,8 +157,8 @@ func (v *PersistentVector) Nth(i int, notFound interface{}) interface{} {
 	return notFound
 }
 
-// TODO: Follow up on this
-// NOTE: Is this even needed?
+// Render string representation. Allows for custom printing of PersistentVectors.
+// TODO: This currently prints strings without quotation marks.
 func (v PersistentVector) String() string {
 	s := "["
 	for i := 0; i < v.Count(); i++ {
@@ -344,9 +344,19 @@ func (v *PersistentVector) Reduce(f IFn, init *interface{}) interface{} {
 	return init
 }
 
-// TODO
 func (v *PersistentVector) KVReduce(f IFn, init interface{}) interface{} {
-	return nil
+	step := 0
+	for i := 0; i < v.cnt; i += step {
+		array := v.ArrayFor(i)
+		for j := 0; j < len(array); j++ {
+			init := f.Invoke(init, j+i, array[j])
+			if IsReduced(init) {
+				return init.(IDeref).Deref()
+			}
+		}
+		step = len(array)
+	}
+	return init
 }
 
 // NOTE: implements IChunkedSeq, Counted
@@ -359,9 +369,11 @@ type ChunkedSeq struct {
 	offset int
 }
 
-// TODO
 func (c *ChunkedSeq) ChunkedFirst() IChunk {
-	return nil
+	return &ArrayChunk{
+		array: c.node,
+		off:   c.offset,
+	}
 }
 
 func (c *ChunkedSeq) ChunkedNext() ISeq {
@@ -396,18 +408,14 @@ func (c *ChunkedSeq) First() interface{} {
 	return c.node[c.offset]
 }
 
-// TODO: This won't work until we implement Cons
 func (c *ChunkedSeq) Next() ISeq {
 	if c.offset+1 < len(c.node) {
-		return nil
-		/*
-			ChunkedSeq{
-				vec:    c.vec,
-				node:   c.node,
-				i:      c.i,
-				offset: c.offset + 1,
-			}
-		*/
+		return &ChunkedSeq{
+			vec:    c.vec,
+			node:   c.node,
+			i:      c.i,
+			offset: c.offset + 1,
+		}
 	}
 	return c.ChunkedNext()
 }
@@ -432,7 +440,7 @@ func (v *PersistentVector) Pop() PersistentVector {
 	}
 	if (v.cnt - v.tailoff()) > 1 {
 		newTail := make([]interface{}, len(v.tail)-1)
-		copy(v.tail, newTail) // NOTE: Figure this out
+		copy(newTail, v.tail)
 		return PersistentVector{
 			_meta: v.Meta(),
 			cnt:   v.cnt - 1,
