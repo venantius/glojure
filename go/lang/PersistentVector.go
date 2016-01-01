@@ -25,7 +25,7 @@ type PersistentVector struct {
 	_meta IPersistentMap
 }
 
-// TODO: Implements Serializable
+// NOTE: Implements Serializable
 type Node struct {
 	/*
 		NOTE: In Clojure, `edit` is an AtomicReference<Thread>. Since Clojure 1.7.0
@@ -48,7 +48,25 @@ var EMPTY_NODE = Node{edit: false, array: make([]interface{}, NODE_SIZE)}
 
 var EMPTY = PersistentVector{cnt: 0, shift: VECTOR_SHIFT, root: EMPTY_NODE, tail: make([]interface{}, 0)}
 
-// TODO: IFn TRANSIENT_VECTOR_CONJ
+/*
+NOTE: This is just a small anonymous class in Java
+*/
+type transientVectorConj struct {
+	AFn
+	IFn // maybe?
+}
+
+// Original method is overloaded.
+func (t *transientVectorConj) Invoke(args ...interface{}) interface{} {
+	coll := args[0]
+	val := args[1]
+	if val == nil {
+		return coll
+	}
+	return coll.(ITransientVector).Conj(val)
+}
+
+var TRANSIENT_VECTOR_CONJ = transientVectorConj{}
 
 // Return a new PersistentVector with the items passed in.
 func adopt(items []interface{}) PersistentVector {
@@ -60,14 +78,48 @@ func adopt(items []interface{}) PersistentVector {
 	}
 }
 
-// TODO
 func createVectorFromIReduceInit(items IReduceInit) PersistentVector {
-	return PersistentVector{}
+	ret := EMPTY.AsTransient()
+	items.ReduceWithInit(&TRANSIENT_VECTOR_CONJ, ret)
+	return ret.Persistent()
 }
 
-// TODO
 func createVectorFromISeq(items ISeq) PersistentVector {
-	return PersistentVector{}
+	arr := make([]interface{}, NODE_SIZE)
+	i := 0
+	for ; items != nil && i < NODE_SIZE; items = items.Next() {
+		arr[i] = items.First()
+		i++
+	}
+	if items != nil {
+		start := PersistentVector{
+			cnt:   NODE_SIZE,
+			root:  EMPTY_NODE,
+			shift: VECTOR_SHIFT,
+			tail:  arr,
+		}
+		ret := start.AsTransient()
+		for ; items != nil; items = items.Next() {
+			ret = ret.Conj(items.First())
+		}
+		return ret.Persistent()
+	} else if i == 32 {
+		return PersistentVector{
+			cnt:   NODE_SIZE,
+			root:  EMPTY_NODE,
+			shift: VECTOR_SHIFT,
+			tail:  arr,
+		}
+	} else {
+		arr2 := make([]interface{}, i)
+		copy(arr2, arr)
+		return PersistentVector{
+			cnt:   i,
+			shift: VECTOR_SHIFT,
+			root:  EMPTY_NODE,
+			tail:  arr2,
+		}
+	}
 }
 
 // TODO
@@ -495,6 +547,7 @@ func (v *PersistentVector) popTail(level uint, node Node) *Node {
 	}
 }
 
+// NOTE: Implements ITransientVector, Counted
 type TransientVector struct {
 	*AFn
 
