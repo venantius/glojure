@@ -2,7 +2,7 @@ package lang
 
 // NOTE: Implements IndexedSeq, IReduce
 type ArraySeq struct {
-	ASeq
+	*ASeq
 
 	array []interface{}
 	i     int

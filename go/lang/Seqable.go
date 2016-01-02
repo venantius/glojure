@@ -1,5 +1,5 @@
 package lang
 
 type Seqable interface {
-	seq() ISeq
+	Seq() ISeq
 }

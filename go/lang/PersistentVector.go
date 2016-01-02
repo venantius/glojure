@@ -8,25 +8,6 @@ import (
 var indexOutOfBoundsException = errors.New("Index out of bounds.")
 var emptyVectorPopError = errors.New("Can't pop empty vector.")
 
-// TODO: Remove this
-type Iterator struct{}
-type Iterable interface{}
-
-// TODO: All of this is tied to java.util.list ;; is there an analog for this in Go that we'd actually use?
-type List struct{}
-
-func (l *List) Size() int {
-	return 0
-}
-
-func (l *List) ToArray() []interface{} {
-	return make([]interface{}, 5)
-}
-
-func (l *List) Get(i int) interface{} {
-	return 5
-}
-
 // NOTE: Implements IObj, IEditableCollection, IKVReduce
 type PersistentVector struct {
 	*APersistentVector
@@ -57,12 +38,20 @@ const (
 	NODE_END_IDX = NODE_SIZE - 1
 )
 
-var EMPTY_NODE = &Node{edit: false, array: make([]interface{}, NODE_SIZE)}
+var EMPTY_PERSISTENT_VECTOR_NODE = &Node{
+	edit:  false,
+	array: make([]interface{}, NODE_SIZE),
+}
 
-var EMPTY = &PersistentVector{cnt: 0, shift: VECTOR_SHIFT, root: EMPTY_NODE, tail: make([]interface{}, 0)}
+var EMPTY_PERSISENT_VECTOR = &PersistentVector{
+	cnt:   0,
+	shift: VECTOR_SHIFT,
+	root:  EMPTY_PERSISTENT_VECTOR_NODE,
+	tail:  make([]interface{}, 0),
+}
 
 /*
-NOTE: This is just a small anonymous class in Java
+	NOTE: This is just a small anonymous class in Java
 */
 type transientVectorConj struct {
 	AFn
@@ -86,13 +75,13 @@ func adopt(items []interface{}) *PersistentVector {
 	return &PersistentVector{
 		cnt:   len(items),
 		shift: VECTOR_SHIFT,
-		root:  EMPTY_NODE,
+		root:  EMPTY_PERSISTENT_VECTOR_NODE,
 		tail:  items,
 	}
 }
 
 func createVectorFromIReduceInit(items IReduceInit) *PersistentVector {
-	ret := EMPTY.AsTransient()
+	ret := EMPTY_PERSISENT_VECTOR.AsTransient()
 	items.ReduceWithInit(&TRANSIENT_VECTOR_CONJ, ret)
 	return ret.Persistent()
 }
@@ -107,7 +96,7 @@ func createVectorFromISeq(items ISeq) *PersistentVector {
 	if items != nil {
 		start := PersistentVector{
 			cnt:   NODE_SIZE,
-			root:  EMPTY_NODE,
+			root:  EMPTY_PERSISTENT_VECTOR_NODE,
 			shift: VECTOR_SHIFT,
 			tail:  arr,
 		}
@@ -119,7 +108,7 @@ func createVectorFromISeq(items ISeq) *PersistentVector {
 	} else if i == 32 {
 		return &PersistentVector{
 			cnt:   NODE_SIZE,
-			root:  EMPTY_NODE,
+			root:  EMPTY_PERSISTENT_VECTOR_NODE,
 			shift: VECTOR_SHIFT,
 			tail:  arr,
 		}
@@ -129,23 +118,25 @@ func createVectorFromISeq(items ISeq) *PersistentVector {
 		return &PersistentVector{
 			cnt:   i,
 			shift: VECTOR_SHIFT,
-			root:  EMPTY_NODE,
+			root:  EMPTY_PERSISTENT_VECTOR_NODE,
 			tail:  arr2,
 		}
 	}
 }
 
-func createVectorFromList(list List) *PersistentVector {
+// TODO: This is complicated because it's tied to java.util.List, which is an
+// abstraction that doesn't seem to exist in Go
+func createVectorFromList(list *List) *PersistentVector {
 	size := list.Size()
 	if size <= NODE_SIZE {
 		return &PersistentVector{
 			cnt:   size,
 			shift: VECTOR_SHIFT,
-			root:  EMPTY_NODE,
+			root:  EMPTY_PERSISTENT_VECTOR_NODE,
 			tail:  list.ToArray(),
 		}
 	}
-	ret := EMPTY.AsTransient()
+	ret := EMPTY_PERSISENT_VECTOR.AsTransient()
 	for i := 0; i < size; i++ {
 		ret = ret.Conj(list.Get(i))
 	}
@@ -156,7 +147,7 @@ func createVectorFromList(list List) *PersistentVector {
 func createVectorFromIterable(items Iterable) *PersistentVector {
 	// TODO: if arraylist, use createVectorFromList
 	// iter := items.Iterator()
-	ret := EMPTY.AsTransient()
+	ret := EMPTY_PERSISENT_VECTOR.AsTransient()
 	// TODO: this should be a while loop.
 	// for iter.HasNext() {
 	//	ret = ret.Conj(iter.Next())
@@ -165,7 +156,7 @@ func createVectorFromIterable(items Iterable) *PersistentVector {
 }
 
 func createVectorFromInterfaceSlice(items []interface{}) *PersistentVector {
-	ret := EMPTY.AsTransient()
+	ret := EMPTY_PERSISENT_VECTOR.AsTransient()
 	for _, item := range items {
 		ret = ret.Conj(item)
 	}
@@ -175,7 +166,7 @@ func createVectorFromInterfaceSlice(items []interface{}) *PersistentVector {
 // General initializer; does type checking and dispatches to appropriate
 // constructor.
 func CreateVector(items ...interface{}) *PersistentVector {
-	ret := EMPTY
+	ret := EMPTY_PERSISENT_VECTOR
 	switch items[0].(type) {
 	case IReduceInit:
 		ret = createVectorFromIReduceInit(items[0].(IReduceInit))
@@ -419,7 +410,7 @@ func (v *PersistentVector) Reduce(f IFn, init *interface{}) interface{} {
 		// In Clojure these are pre-incremented
 		for j := 0; j < len(array); j++ {
 			init := f.Invoke(init, array[j])
-			if IsReduced(init) {
+			if RT.IsReduced(init) {
 				return init.(IDeref).Deref()
 			}
 		}
@@ -434,7 +425,7 @@ func (v *PersistentVector) KVReduce(f IFn, init interface{}) interface{} {
 		array := v.ArrayFor(i)
 		for j := 0; j < len(array); j++ {
 			init := f.Invoke(init, j+i, array[j])
-			if IsReduced(init) {
+			if RT.IsReduced(init) {
 				return init.(IDeref).Deref()
 			}
 		}
@@ -471,7 +462,7 @@ func (c *ChunkedSeq) ChunkedMore() ISeq {
 	s := c.ChunkedNext()
 	if s == nil {
 		// TODO: This could probably be replaced with an EmptyList struct.
-		return &EMPTY_PERSISTENT_LIST
+		return EMPTY_PERSISTENT_LIST
 	}
 	return s
 }
@@ -511,7 +502,7 @@ func (c *ChunkedSeq) Count() int {
 
 // Empty the vector's contents.
 func (v *PersistentVector) Empty() *PersistentVector {
-	return EMPTY.WithMeta(v.Meta())
+	return EMPTY_PERSISENT_VECTOR.WithMeta(v.Meta())
 }
 
 func (v *PersistentVector) Pop() *PersistentVector {
@@ -519,7 +510,7 @@ func (v *PersistentVector) Pop() *PersistentVector {
 		panic(emptyVectorPopError)
 	}
 	if v.cnt == 1 {
-		return EMPTY.WithMeta(v.Meta())
+		return EMPTY_PERSISENT_VECTOR.WithMeta(v.Meta())
 	}
 	if (v.cnt - v.tailoff()) > 1 {
 		newTail := make([]interface{}, len(v.tail)-1)
@@ -536,7 +527,7 @@ func (v *PersistentVector) Pop() *PersistentVector {
 	newroot := v.popTail(v.shift, v.root)
 	newshift := v.shift
 	if newroot == nil {
-		newroot = EMPTY_NODE
+		newroot = EMPTY_PERSISTENT_VECTOR_NODE
 	}
 	if v.shift > VECTOR_SHIFT && &newroot.array[1] == nil {
 		newroot = newroot.array[0].(*Node)

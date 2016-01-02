@@ -31,12 +31,12 @@ func (a *ArrayChunk) DropFirst() IChunk {
 
 func (a *ArrayChunk) Reduce(f IFn, start interface{}) interface{} {
 	ret := f.Invoke(start, a.array[a.off])
-	if IsReduced(ret) {
+	if RT.IsReduced(ret) {
 		return ret
 	}
 	for x := a.off + 1; x < a.end; x++ {
 		ret = f.Invoke(ret, a.array[x])
-		if IsReduced(ret) {
+		if RT.IsReduced(ret) {
 			return ret
 		}
 	}
