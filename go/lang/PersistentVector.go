@@ -33,7 +33,7 @@ type PersistentVector struct {
 
 	cnt   int // count
 	shift uint
-	root  Node
+	root  *Node
 	tail  []interface{}
 	_meta IPersistentMap
 }
@@ -57,9 +57,9 @@ const (
 	NODE_END_IDX = NODE_SIZE - 1
 )
 
-var EMPTY_NODE = Node{edit: false, array: make([]interface{}, NODE_SIZE)}
+var EMPTY_NODE = &Node{edit: false, array: make([]interface{}, NODE_SIZE)}
 
-var EMPTY = PersistentVector{cnt: 0, shift: VECTOR_SHIFT, root: EMPTY_NODE, tail: make([]interface{}, 0)}
+var EMPTY = &PersistentVector{cnt: 0, shift: VECTOR_SHIFT, root: EMPTY_NODE, tail: make([]interface{}, 0)}
 
 /*
 NOTE: This is just a small anonymous class in Java
@@ -82,8 +82,8 @@ func (t *transientVectorConj) Invoke(args ...interface{}) interface{} {
 var TRANSIENT_VECTOR_CONJ = transientVectorConj{}
 
 // Return a new PersistentVector with the items passed in.
-func adopt(items []interface{}) PersistentVector {
-	return PersistentVector{
+func adopt(items []interface{}) *PersistentVector {
+	return &PersistentVector{
 		cnt:   len(items),
 		shift: VECTOR_SHIFT,
 		root:  EMPTY_NODE,
@@ -91,13 +91,13 @@ func adopt(items []interface{}) PersistentVector {
 	}
 }
 
-func createVectorFromIReduceInit(items IReduceInit) PersistentVector {
+func createVectorFromIReduceInit(items IReduceInit) *PersistentVector {
 	ret := EMPTY.AsTransient()
 	items.ReduceWithInit(&TRANSIENT_VECTOR_CONJ, ret)
 	return ret.Persistent()
 }
 
-func createVectorFromISeq(items ISeq) PersistentVector {
+func createVectorFromISeq(items ISeq) *PersistentVector {
 	arr := make([]interface{}, NODE_SIZE)
 	i := 0
 	for ; items != nil && i < NODE_SIZE; items = items.Next() {
@@ -117,7 +117,7 @@ func createVectorFromISeq(items ISeq) PersistentVector {
 		}
 		return ret.Persistent()
 	} else if i == 32 {
-		return PersistentVector{
+		return &PersistentVector{
 			cnt:   NODE_SIZE,
 			root:  EMPTY_NODE,
 			shift: VECTOR_SHIFT,
@@ -126,7 +126,7 @@ func createVectorFromISeq(items ISeq) PersistentVector {
 	} else {
 		arr2 := make([]interface{}, i)
 		copy(arr2, arr)
-		return PersistentVector{
+		return &PersistentVector{
 			cnt:   i,
 			shift: VECTOR_SHIFT,
 			root:  EMPTY_NODE,
@@ -135,10 +135,10 @@ func createVectorFromISeq(items ISeq) PersistentVector {
 	}
 }
 
-func createVectorFromList(list List) PersistentVector {
+func createVectorFromList(list List) *PersistentVector {
 	size := list.Size()
 	if size <= NODE_SIZE {
-		return PersistentVector{
+		return &PersistentVector{
 			cnt:   size,
 			shift: VECTOR_SHIFT,
 			root:  EMPTY_NODE,
@@ -153,7 +153,7 @@ func createVectorFromList(list List) PersistentVector {
 }
 
 // TODO: Review idiomatic iterators in Go, don't try to copy this from Java.
-func createVectorFromIterable(items Iterable) PersistentVector {
+func createVectorFromIterable(items Iterable) *PersistentVector {
 	// TODO: if arraylist, use createVectorFromList
 	// iter := items.Iterator()
 	ret := EMPTY.AsTransient()
@@ -164,7 +164,7 @@ func createVectorFromIterable(items Iterable) PersistentVector {
 	return ret.Persistent()
 }
 
-func createVectorFromInterfaceSlice(items []interface{}) PersistentVector {
+func createVectorFromInterfaceSlice(items []interface{}) *PersistentVector {
 	ret := EMPTY.AsTransient()
 	for _, item := range items {
 		ret = ret.Conj(item)
@@ -174,7 +174,7 @@ func createVectorFromInterfaceSlice(items []interface{}) PersistentVector {
 
 // General initializer; does type checking and dispatches to appropriate
 // constructor.
-func CreateVector(items ...interface{}) PersistentVector {
+func CreateVector(items ...interface{}) *PersistentVector {
 	ret := EMPTY
 	switch items[0].(type) {
 	case IReduceInit:
@@ -190,8 +190,8 @@ func CreateVector(items ...interface{}) PersistentVector {
 	return ret
 }
 
-func (v *PersistentVector) AsTransient() TransientVector {
-	return TransientVector{
+func (v *PersistentVector) AsTransient() *TransientVector {
+	return &TransientVector{
 		cnt:   v.cnt,
 		root:  editableRoot(v.root),
 		shift: v.shift,
@@ -214,10 +214,10 @@ func (v *PersistentVector) ArrayFor(i int) []interface{} {
 	if i >= v.tailoff() {
 		return v.tail
 	}
-	n := *&v.root
+	n := v.root
 	for level := v.shift; level > 0; level -= VECTOR_SHIFT {
 		// NOTE: bitshift is probably wrong here as well.
-		n = n.array[(i>>level)&(NODE_END_IDX)].(Node)
+		n = n.array[(i>>level)&(NODE_END_IDX)].(*Node)
 	}
 	return n.array
 }
@@ -256,13 +256,13 @@ func (v PersistentVector) String() string {
 }
 
 // Assoc in a new value at the index.
-func (v *PersistentVector) AssocN(i int, val interface{}) PersistentVector {
+func (v *PersistentVector) AssocN(i int, val interface{}) *PersistentVector {
 	if i >= 0 && i < v.cnt {
 		if i >= v.tailoff() {
 			newTail := make([]interface{}, len(v.tail))
 			copy(newTail, v.tail)
 			newTail[i&(NODE_END_IDX)] = val
-			return PersistentVector{
+			return &PersistentVector{
 				_meta: v.Meta(),
 				cnt:   v.cnt,
 				shift: v.shift,
@@ -270,7 +270,7 @@ func (v *PersistentVector) AssocN(i int, val interface{}) PersistentVector {
 				tail:  newTail,
 			}
 		}
-		return PersistentVector{
+		return &PersistentVector{
 			_meta: v.Meta(),
 			cnt:   v.cnt,
 			shift: v.shift,
@@ -285,23 +285,23 @@ func (v *PersistentVector) AssocN(i int, val interface{}) PersistentVector {
 }
 
 // Private function to handle assoc-ing at a lower level
-func doAssoc(level uint, node Node, i int, val interface{}) Node {
+func doAssoc(level uint, node *Node, i int, val interface{}) *Node {
 	var arr []interface{}
 	copy(arr, node.array)
-	ret := Node{edit: node.edit, array: arr}
+	ret := &Node{edit: node.edit, array: arr}
 	if level == 0 {
 		ret.array[i&(NODE_END_IDX)] = val
 	} else {
 		// NOTE: Bitwise issues again.
 		subidx := (i >> level) & (NODE_END_IDX)
-		ret.array[subidx] = doAssoc(level-VECTOR_SHIFT, node.array[subidx].(Node), i, val)
+		ret.array[subidx] = doAssoc(level-VECTOR_SHIFT, node.array[subidx].(*Node), i, val)
 	}
 	return ret
 }
 
 // Return a new PersistentVector with new metadata.
-func (v *PersistentVector) WithMeta(meta IPersistentMap) PersistentVector {
-	return PersistentVector{
+func (v *PersistentVector) WithMeta(meta IPersistentMap) *PersistentVector {
+	return &PersistentVector{
 		_meta: meta,
 		cnt:   v.cnt,
 		shift: v.shift,
@@ -315,26 +315,26 @@ func (v *PersistentVector) Meta() IPersistentMap {
 	return v._meta
 }
 
-func newPath(edit bool, level uint, node Node) Node {
+func newPath(edit bool, level uint, node *Node) *Node {
 	if level == 0 {
 		return node
 	}
-	ret := Node{edit: edit}
+	ret := &Node{edit: edit}
 	ret.array[0] = newPath(edit, level-VECTOR_SHIFT, node)
 	return ret
 }
 
-func (v *PersistentVector) pushTail(level uint, parent Node, tailnode Node) Node {
+func (v *PersistentVector) pushTail(level uint, parent *Node, tailnode *Node) *Node {
 	// NOTE: bitshifts require review
 	subidx := ((v.cnt - 1) >> level) & NODE_SIZE
-	ret := Node{edit: parent.edit, array: *&parent.array}
-	nodeToInsert := Node{edit: false}
+	ret := &Node{edit: parent.edit, array: *&parent.array}
+	nodeToInsert := &Node{edit: false}
 	if level == VECTOR_SHIFT {
 		nodeToInsert = tailnode
 	} else {
 		child := parent.array[subidx]
 		if child != nil {
-			nodeToInsert = v.pushTail(level-VECTOR_SHIFT, child.(Node), tailnode)
+			nodeToInsert = v.pushTail(level-VECTOR_SHIFT, child.(*Node), tailnode)
 		} else {
 			nodeToInsert = newPath(v.root.edit, level-VECTOR_SHIFT, tailnode)
 		}
@@ -343,12 +343,12 @@ func (v *PersistentVector) pushTail(level uint, parent Node, tailnode Node) Node
 	return ret
 }
 
-func (v *PersistentVector) Cons(val interface{}) PersistentVector {
+func (v *PersistentVector) Cons(val interface{}) *PersistentVector {
 	if v.cnt-v.tailoff() < NODE_SIZE {
 		newTail := make([]interface{}, len(v.tail)+1)
 		copy(newTail, v.tail)
 		newTail[len(v.tail)] = val
-		return PersistentVector{
+		return &PersistentVector{
 			_meta: v.Meta(),
 			cnt:   v.cnt + 1,
 			shift: v.shift,
@@ -356,20 +356,20 @@ func (v *PersistentVector) Cons(val interface{}) PersistentVector {
 			tail:  newTail,
 		}
 	}
-	newroot := Node{edit: false}
-	tailnode := Node{v.root.edit, v.tail}
+	newroot := &Node{edit: false}
+	tailnode := &Node{v.root.edit, v.tail}
 	newshift := v.shift
 	fmt.Println(tailnode)
 	// NOTE: Again, not comfortable with bit shifting here.
 	if (v.cnt >> VECTOR_SHIFT) > (1 << v.shift) {
-		newroot = Node{edit: v.root.edit} // defaults?
+		newroot = &Node{edit: v.root.edit} // defaults?
 		newroot.array[0] = v.root
 		newroot.array[1] = newPath(v.root.edit, v.shift, tailnode)
 		newshift += VECTOR_SHIFT
 	} else {
 		newroot = v.pushTail(v.shift, v.root, tailnode)
 	}
-	return PersistentVector{
+	return &PersistentVector{
 		_meta: v.Meta(),
 		cnt:   v.cnt + 1,
 		shift: newshift,
@@ -476,12 +476,12 @@ func (c *ChunkedSeq) ChunkedMore() ISeq {
 	return s
 }
 
-func (c *ChunkedSeq) WithMeta(meta IPersistentMap) ChunkedSeq {
+func (c *ChunkedSeq) WithMeta(meta IPersistentMap) *ChunkedSeq {
 	if meta == c.vec._meta {
-		return *c
+		return c
 	}
-	return ChunkedSeq{
-		vec:    c.vec.WithMeta(meta),
+	return &ChunkedSeq{
+		vec:    *c.vec.WithMeta(meta),
 		node:   c.node,
 		i:      c.i,
 		offset: c.offset,
@@ -510,11 +510,11 @@ func (c *ChunkedSeq) Count() int {
 }
 
 // Empty the vector's contents.
-func (v *PersistentVector) Empty() PersistentVector {
+func (v *PersistentVector) Empty() *PersistentVector {
 	return EMPTY.WithMeta(v.Meta())
 }
 
-func (v *PersistentVector) Pop() PersistentVector {
+func (v *PersistentVector) Pop() *PersistentVector {
 	if v.cnt == 0 {
 		panic(emptyVectorPopError)
 	}
@@ -524,7 +524,7 @@ func (v *PersistentVector) Pop() PersistentVector {
 	if (v.cnt - v.tailoff()) > 1 {
 		newTail := make([]interface{}, len(v.tail)-1)
 		copy(newTail, v.tail)
-		return PersistentVector{
+		return &PersistentVector{
 			_meta: v.Meta(),
 			cnt:   v.cnt - 1,
 			shift: v.shift,
@@ -533,20 +533,16 @@ func (v *PersistentVector) Pop() PersistentVector {
 		}
 	}
 	newTail := v.ArrayFor(v.cnt - 2)
-
-	// TODO: Figure out the pointer v. struct return value issue (see NOTES)
-	_newroot := v.popTail(v.shift, v.root)
-	newroot := *_newroot
-
+	newroot := v.popTail(v.shift, v.root)
 	newshift := v.shift
-	if &_newroot == nil {
+	if newroot == nil {
 		newroot = EMPTY_NODE
 	}
 	if v.shift > VECTOR_SHIFT && &newroot.array[1] == nil {
-		newroot = newroot.array[0].(Node)
+		newroot = newroot.array[0].(*Node)
 		newshift -= VECTOR_SHIFT
 	}
-	return PersistentVector{
+	return &PersistentVector{
 		_meta: v.Meta(),
 		cnt:   v.cnt - 1,
 		shift: newshift,
@@ -555,10 +551,10 @@ func (v *PersistentVector) Pop() PersistentVector {
 	}
 }
 
-func (v *PersistentVector) popTail(level uint, node Node) *Node {
+func (v *PersistentVector) popTail(level uint, node *Node) *Node {
 	subidx := ((v.cnt - 2) >> level) & (NODE_END_IDX)
 	if level > VECTOR_SHIFT {
-		newchild := v.popTail(level-VECTOR_SHIFT, node.array[subidx].(Node))
+		newchild := v.popTail(level-VECTOR_SHIFT, node.array[subidx].(*Node))
 		if &newchild == nil && subidx == 0 {
 			return nil
 		} else {
@@ -585,7 +581,7 @@ type TransientVector struct {
 
 	cnt   int
 	shift uint
-	root  Node
+	root  *Node
 	tail  []interface{}
 }
 
@@ -601,30 +597,30 @@ func (t *TransientVector) ensureEditable() {
 	}
 }
 
-func (t *TransientVector) ensureEditableNode(node Node) Node {
+func (t *TransientVector) ensureEditableNode(node *Node) *Node {
 	if node.edit == t.root.edit {
 		return node
 	}
 	var arr []interface{}
 	copy(arr, node.array)
-	return Node{edit: t.root.edit, array: arr}
+	return &Node{edit: t.root.edit, array: arr}
 }
 
-func editableRoot(node Node) Node {
+func editableRoot(node *Node) *Node {
 	var arr []interface{}
 	copy(arr, node.array)
-	return Node{
+	return &Node{
 		edit:  true,
 		array: arr,
 	}
 }
 
-func (t *TransientVector) Persistent() PersistentVector {
+func (t *TransientVector) Persistent() *PersistentVector {
 	t.ensureEditable()
 	t.root.edit = false
 	trimmedTail := make([]interface{}, t.cnt-t.tailoff())
 	copy(trimmedTail, t.tail)
-	return PersistentVector{
+	return &PersistentVector{
 		cnt:   t.cnt,
 		shift: t.shift,
 		root:  t.root,
@@ -638,16 +634,16 @@ func editableTail(t []interface{}) []interface{} {
 	return arr
 }
 
-func (t *TransientVector) Conj(val interface{}) TransientVector {
+func (t *TransientVector) Conj(val interface{}) *TransientVector {
 	t.ensureEditable()
 	i := t.cnt
 	if (i - t.tailoff()) < NODE_SIZE {
 		t.tail[i&(NODE_END_IDX)] = val
 		t.cnt++
-		return *t
+		return t
 	}
-	var newroot Node
-	tailnode := Node{
+	var newroot *Node
+	tailnode := &Node{
 		edit:  t.root.edit,
 		array: t.tail,
 	}
@@ -656,7 +652,7 @@ func (t *TransientVector) Conj(val interface{}) TransientVector {
 	newshift := t.shift
 	// TODO: review bit shift
 	if (t.cnt >> VECTOR_SHIFT) > (1 << t.shift) {
-		newroot = Node{edit: t.root.edit}
+		newroot = &Node{edit: t.root.edit}
 		newroot.array[0] = t.root
 		newroot.array[1] = newPath(t.root.edit, t.shift, tailnode)
 		newshift += VECTOR_SHIFT
@@ -666,21 +662,21 @@ func (t *TransientVector) Conj(val interface{}) TransientVector {
 	t.root = newroot
 	t.shift = newshift
 	t.cnt++
-	return *t
+	return t
 }
 
-func (t *TransientVector) pushTail(level uint, parent Node, tailnode Node) Node {
+func (t *TransientVector) pushTail(level uint, parent *Node, tailnode *Node) *Node {
 	parent = t.ensureEditableNode(parent)
 	// TODO: bit shifting?
 	subidx := ((t.cnt - 1) >> level) & (NODE_END_IDX)
 	ret := parent
-	var nodeToInsert Node
+	var nodeToInsert *Node
 	if level == VECTOR_SHIFT {
 		nodeToInsert = tailnode
 	} else {
 		child := parent.array[subidx]
 		if child != nil {
-			nodeToInsert = t.pushTail(level-VECTOR_SHIFT, child.(Node), tailnode)
+			nodeToInsert = t.pushTail(level-VECTOR_SHIFT, child.(*Node), tailnode)
 		} else {
 			nodeToInsert = newPath(t.root.edit, level-VECTOR_SHIFT, tailnode)
 		}
@@ -705,7 +701,7 @@ func (t *TransientVector) arrayFor(i int) []interface{} {
 		node := t.root
 		for level := t.shift; level > 0; level -= VECTOR_SHIFT {
 			// TODO: bitshift
-			node = node.array[(i>>level)&(NODE_END_IDX)].(Node)
+			node = node.array[(i>>level)&(NODE_END_IDX)].(*Node)
 		}
 		return node.array
 	}
@@ -720,7 +716,7 @@ func (t *TransientVector) editableArrayFor(i int) []interface{} {
 		node := t.root
 		for level := t.shift; level > 0; level -= VECTOR_SHIFT {
 			// TODO: bit shift
-			node = t.ensureEditableNode(node.array[(i>>level)&(NODE_END_IDX)].(Node))
+			node = t.ensureEditableNode(node.array[(i>>level)&(NODE_END_IDX)].(*Node))
 		}
 		return node.array
 	}
@@ -762,15 +758,15 @@ func (t *TransientVector) Nth(i int, notFound interface{}) interface{} {
 	}
 }
 
-func (t *TransientVector) AssocN(i int, val interface{}) TransientVector {
+func (t *TransientVector) AssocN(i int, val interface{}) *TransientVector {
 	t.ensureEditable()
 	if i >= 0 && i < t.cnt {
 		if i >= t.tailoff() {
 			t.tail[i&(NODE_END_IDX)] = val
-			return *t
+			return t
 		}
 		t.root = t.doAssoc(t.shift, t.root, i, val)
-		return *t
+		return t
 	}
 	if i == t.cnt {
 		return t.Conj(val)
@@ -779,7 +775,7 @@ func (t *TransientVector) AssocN(i int, val interface{}) TransientVector {
 }
 
 // Associate a new value at the given key. Key must be an integer.
-func (t *TransientVector) Assoc(key interface{}, val interface{}) TransientVector {
+func (t *TransientVector) Assoc(key interface{}, val interface{}) *TransientVector {
 	switch key.(type) {
 	case int:
 		return t.AssocN(key.(int), val)
@@ -787,66 +783,64 @@ func (t *TransientVector) Assoc(key interface{}, val interface{}) TransientVecto
 	panic("Key must be integer")
 }
 
-func (t *TransientVector) doAssoc(level uint, node Node, i int, val interface{}) Node {
+func (t *TransientVector) doAssoc(level uint, node *Node, i int, val interface{}) *Node {
 	node = t.ensureEditableNode(node)
 	ret := node
 	if level == 0 {
 		ret.array[i&(NODE_END_IDX)] = val
 	} else {
 		subidx := (i >> level) & (NODE_END_IDX)
-		ret.array[subidx] = t.doAssoc(level-VECTOR_SHIFT, node.array[subidx].(Node), i, val)
+		ret.array[subidx] = t.doAssoc(level-VECTOR_SHIFT, node.array[subidx].(*Node), i, val)
 	}
 	return ret
 }
 
-func (t *TransientVector) Pop() TransientVector {
+func (t *TransientVector) Pop() *TransientVector {
 	t.ensureEditable()
 	if t.cnt == 0 {
 		panic("Can't pop empty vector")
 	}
 	if t.cnt == 1 {
 		t.cnt = 0
-		return *t
+		return t
 	}
 	i := t.cnt - 1
 	if (i & (NODE_END_IDX)) > 0 {
 		t.cnt--
-		return *t
+		return t
 	}
 
 	newtail := t.editableArrayFor(t.cnt - 2)
 	newroot := t.popTail(t.shift, t.root)
 	newshift := t.shift
-	// NOTE: suspicious of this &newroot (See NOTE on pointers v. structs earlier)
-	if &newroot == nil {
-		newroot = Node{edit: t.root.edit}
+	if newroot == nil {
+		newroot = &Node{edit: t.root.edit}
 	}
 	if t.shift > VECTOR_SHIFT && newroot.array[1] == nil {
-		newroot = t.ensureEditableNode(newroot.array[0].(Node))
+		newroot = t.ensureEditableNode(newroot.array[0].(*Node))
 		newshift -= VECTOR_SHIFT
 	}
 	t.root = newroot
 	t.shift = newshift
 	t.cnt--
 	t.tail = newtail
-	return *t
+	return t
 }
 
-func (t *TransientVector) popTail(level uint, node Node) Node {
+func (t *TransientVector) popTail(level uint, node *Node) *Node {
 	node = t.ensureEditableNode(node)
-	var nilreturn Node
 	subidx := ((t.cnt - 2) >> level) & (NODE_END_IDX)
 	if level > VECTOR_SHIFT {
-		newchild := t.popTail(level-VECTOR_SHIFT, node.array[subidx].(Node))
+		newchild := t.popTail(level-VECTOR_SHIFT, node.array[subidx].(*Node))
 		if &newchild == nil && subidx == 0 {
-			return nilreturn
+			return nil
 		} else {
 			ret := node
 			ret.array[subidx] = newchild
 			return ret
 		}
 	} else if subidx == 0 {
-		return nilreturn
+		return nil
 	} else {
 		ret := node
 		ret.array[subidx] = nil

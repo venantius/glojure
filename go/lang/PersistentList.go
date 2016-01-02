@@ -17,6 +17,23 @@ func (p *Primordial) GetRequiredArity() int {
 	return 0
 }
 
+/*
+TODO: uncomment me
+func (p *Primordial) doInvoke(args interface{}) interface{} {
+	switch args.(type) {
+	case ArraySeq:
+		argsarray := args.(ArraySeq).array
+		ret := EMPTY_PERSISTENT_LIST
+		for i := len(argsarray) - 1; i >= 0; i-- {
+			ret = ret.Cons(argsarray[i]).(PersistentList)
+		}
+		return ret
+	}
+	// TODO
+	return nil
+}
+*/
+
 var EMPTY_PERSISTENT_LIST = PersistentList{}
 
 // TODO
