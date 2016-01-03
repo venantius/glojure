@@ -52,3 +52,19 @@ func (_ *rt) SubVec(v IPersistentVector, start int, end int) IPersistentVector {
 	}
 	return &SubVector{} // TODO
 }
+
+func (_ *rt) getFrom(coll interface{}, key interface{}, notFound interface{}) interface{} {
+	if coll == nil {
+		return nil
+	}
+	// TODO: This implementation is incomplete
+	return nil
+}
+
+func (_ *rt) Get(coll interface{}, key interface{}, notFound interface{}) interface{} {
+	switch coll.(type) {
+	case ILookup:
+		return coll.(ILookup).ValAt(key, notFound)
+	}
+	return RT.getFrom(coll, key, notFound)
+}

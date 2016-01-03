@@ -1,3 +1,7 @@
+2016-01-03
+----------
+* So far I've been making different versions of Cons based on the various interfaces entailed. I think this is probably the wrong approach - so far everything that supports Cons seems to extend IPersistentCollection, so maybe instead we can just defined Cons at the IPersistentCollection interface level once and not for any of the sub-interfaces.
+
 2016-01-02
 ----------
 * I've decided to return pointer types for any structs I'm working with. It would appear that specifying a return value of an interface expects a pointer type anyways, so this is actually a move in the direction of consistency.
@@ -9,6 +13,8 @@
 * Something I wasn't aware of about Clojure is the fact that various classes implement their own versious of Seq by way of nested classes. I'll need to be careful when working on this that I create a useful and functional interface here.
 
 * `ToArray` methods should probably be `ToSlice` for Go.
+
+* Nested interfaces are a recipe for disaster. I think ultimately all of the core interfaces are going to have to be flattened.
 
 2016-01-01
 ----------
