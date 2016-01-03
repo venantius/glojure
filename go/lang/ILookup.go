@@ -1,5 +1,5 @@
 package lang
 
 type ILookup interface {
-	valAt(key interface{}, notFound interface{}) interface{}
+	ValAt(key interface{}, notFound interface{}) interface{}
 }

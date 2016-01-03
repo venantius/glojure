@@ -5,10 +5,9 @@ import (
 	"fmt" // really just for debugging
 )
 
-var indexOutOfBoundsException = errors.New("Index out of bounds.")
-var emptyVectorPopError = errors.New("Can't pop empty vector.")
+var emptyVectorPopError = "Can't pop empty vector."
 
-// NOTE: Implements IObj, IEditableCollection, IKVReduce
+// NOTE: Implements IObj, IEditableCollection, IReduce, IKVReduce
 type PersistentVector struct {
 	*APersistentVector
 
@@ -43,7 +42,7 @@ var EMPTY_PERSISTENT_VECTOR_NODE = &Node{
 	array: make([]interface{}, NODE_SIZE),
 }
 
-var EMPTY_PERSISENT_VECTOR = &PersistentVector{
+var EMPTY_PERSISTENT_VECTOR = &PersistentVector{
 	cnt:   0,
 	shift: VECTOR_SHIFT,
 	root:  EMPTY_PERSISTENT_VECTOR_NODE,
@@ -81,7 +80,7 @@ func adopt(items []interface{}) *PersistentVector {
 }
 
 func createVectorFromIReduceInit(items IReduceInit) *PersistentVector {
-	ret := EMPTY_PERSISENT_VECTOR.AsTransient()
+	ret := EMPTY_PERSISTENT_VECTOR.AsTransient()
 	items.ReduceWithInit(&TRANSIENT_VECTOR_CONJ, ret)
 	return ret.Persistent()
 }
@@ -136,7 +135,7 @@ func createVectorFromList(list *List) *PersistentVector {
 			tail:  list.ToArray(),
 		}
 	}
-	ret := EMPTY_PERSISENT_VECTOR.AsTransient()
+	ret := EMPTY_PERSISTENT_VECTOR.AsTransient()
 	for i := 0; i < size; i++ {
 		ret = ret.Conj(list.Get(i))
 	}
@@ -147,7 +146,7 @@ func createVectorFromList(list *List) *PersistentVector {
 func createVectorFromIterable(items Iterable) *PersistentVector {
 	// TODO: if arraylist, use createVectorFromList
 	// iter := items.Iterator()
-	ret := EMPTY_PERSISENT_VECTOR.AsTransient()
+	ret := EMPTY_PERSISTENT_VECTOR.AsTransient()
 	// TODO: this should be a while loop.
 	// for iter.HasNext() {
 	//	ret = ret.Conj(iter.Next())
@@ -156,7 +155,7 @@ func createVectorFromIterable(items Iterable) *PersistentVector {
 }
 
 func createVectorFromInterfaceSlice(items []interface{}) *PersistentVector {
-	ret := EMPTY_PERSISENT_VECTOR.AsTransient()
+	ret := EMPTY_PERSISTENT_VECTOR.AsTransient()
 	for _, item := range items {
 		ret = ret.Conj(item)
 	}
@@ -166,7 +165,7 @@ func createVectorFromInterfaceSlice(items []interface{}) *PersistentVector {
 // General initializer; does type checking and dispatches to appropriate
 // constructor.
 func CreateVector(items ...interface{}) *PersistentVector {
-	ret := EMPTY_PERSISENT_VECTOR
+	ret := EMPTY_PERSISTENT_VECTOR
 	switch items[0].(type) {
 	case IReduceInit:
 		ret = createVectorFromIReduceInit(items[0].(IReduceInit))
@@ -200,7 +199,7 @@ func (v *PersistentVector) tailoff() int {
 
 func (v *PersistentVector) ArrayFor(i int) []interface{} {
 	if i < 0 || i >= v.cnt {
-		panic(indexOutOfBoundsException)
+		panic(IndexOutOfBoundsException)
 	}
 	if i >= v.tailoff() {
 		return v.tail
@@ -272,7 +271,7 @@ func (v *PersistentVector) AssocN(i int, val interface{}) *PersistentVector {
 	if i == v.cnt {
 		return v.Cons(val)
 	}
-	panic(indexOutOfBoundsException)
+	panic(IndexOutOfBoundsException)
 }
 
 // Private function to handle assoc-ing at a lower level
@@ -502,7 +501,7 @@ func (c *ChunkedSeq) Count() int {
 
 // Empty the vector's contents.
 func (v *PersistentVector) Empty() *PersistentVector {
-	return EMPTY_PERSISENT_VECTOR.WithMeta(v.Meta())
+	return EMPTY_PERSISTENT_VECTOR.WithMeta(v.Meta())
 }
 
 func (v *PersistentVector) Pop() *PersistentVector {
@@ -510,7 +509,7 @@ func (v *PersistentVector) Pop() *PersistentVector {
 		panic(emptyVectorPopError)
 	}
 	if v.cnt == 1 {
-		return EMPTY_PERSISENT_VECTOR.WithMeta(v.Meta())
+		return EMPTY_PERSISTENT_VECTOR.WithMeta(v.Meta())
 	}
 	if (v.cnt - v.tailoff()) > 1 {
 		newTail := make([]interface{}, len(v.tail)-1)
@@ -696,7 +695,7 @@ func (t *TransientVector) arrayFor(i int) []interface{} {
 		}
 		return node.array
 	}
-	panic(indexOutOfBoundsException)
+	panic(IndexOutOfBoundsException)
 }
 
 func (t *TransientVector) editableArrayFor(i int) []interface{} {
@@ -711,7 +710,7 @@ func (t *TransientVector) editableArrayFor(i int) []interface{} {
 		}
 		return node.array
 	}
-	panic(indexOutOfBoundsException)
+	panic(IndexOutOfBoundsException)
 }
 
 // NOTE: Function overloading
@@ -762,7 +761,7 @@ func (t *TransientVector) AssocN(i int, val interface{}) *TransientVector {
 	if i == t.cnt {
 		return t.Conj(val)
 	}
-	panic(indexOutOfBoundsException)
+	panic(IndexOutOfBoundsException)
 }
 
 // Associate a new value at the given key. Key must be an integer.

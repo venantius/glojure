@@ -41,3 +41,14 @@ func (_ *rt) seqFrom(coll interface{}) ISeq {
 	// TODO
 	return nil
 }
+
+func (_ *rt) SubVec(v IPersistentVector, start int, end int) IPersistentVector {
+	if end < start || start < 0 || end > v.Count() {
+		panic(IndexOutOfBoundsException)
+	}
+	if start == end {
+		return nil
+		// return EMPTY_PERSISTENT_VECTOR TODO
+	}
+	return &SubVector{} // TODO
+}

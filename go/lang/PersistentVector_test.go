@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-// TODO...test almost everything else
-
 func TestCreateVector(t *testing.T) {
 	varArgsVector := CreateVector(1, 2, "asdf")
 
@@ -15,6 +13,10 @@ func TestCreateVector(t *testing.T) {
 	items[1] = 2
 	items[3] = "asdf"
 	interfaceSliceVector := CreateVector(items)
+
+	if !(varArgsVector.Equals(interfaceSliceVector)) {
+		t.Error("Failed to initialize vectors that should have been equal.")
+	}
 }
 
 func TestCons(t *testing.T) {

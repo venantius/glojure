@@ -17,16 +17,40 @@ func (a *APersistentVector) String() string {
 
 func (a *APersistentVector) Seq() ISeq {
 	if a.Count() > 0 {
-		return PersistentVectorSeq{} // TODO: Fix initializer
+		return &PersistentVectorSeq{} // TODO: Fix initializer
 	}
 	return nil
 }
 
 func (a *APersistentVector) RSeq() ISeq {
 	if a.Count() > 0 {
-		return PersistentVectorRSeq{} // TODO: fix initializer
+		return &APersistentVectorRSeq{} // TODO: fix initializer
 	}
 	return nil
+}
+
+func (a *APersistentVector) Count() int {
+	panic(UnsupportedOperationException)
+}
+
+func (a *APersistentVector) ConsIPersistentCollection(i interface{}) IPersistentCollection {
+	panic(UnsupportedOperationException)
+}
+
+func (a *APersistentVector) ConsIPersistentVector(i interface{}) IPersistentVector {
+	panic(UnsupportedOperationException)
+}
+
+func (a *APersistentVector) Empty() IPersistentCollection {
+	panic(UnsupportedOperationException)
+}
+
+func (a *APersistentVector) Length() int {
+	panic(UnsupportedOperationException)
+}
+
+func (a *APersistentVector) Pop() IPersistentStack {
+	panic(UnsupportedOperationException)
 }
 
 // TODO
@@ -64,12 +88,12 @@ func (a *APersistentVector) HashEq() int {
 }
 
 func (a *APersistentVector) Get(index int) interface{} {
-	return a.Nth(index)
+	return a.Nth(index, nil)
 }
 
 func (a *APersistentVector) Nth(i int, notFound interface{}) interface{} {
 	if i >= 0 && i < a.Count() {
-		return a.Nth(i)
+		return a.Nth(i, nil)
 	}
 	return notFound
 }
@@ -89,7 +113,7 @@ func (a *APersistentVector) IndexOf(interface{}) int {
 
 // TODO
 func (a *APersistentVector) LastIndexOf(i interface{}) int {
-	return nil
+	return 0
 }
 
 // TODO
@@ -100,9 +124,11 @@ func (a *APersistentVector) LastIndexOf(i interface{}) int {
 // func (a *APersistentVector) RangedIterator() TYPE {
 // }
 
+/* NOTE: uncomment
 func (a *APersistentVector) SubList(fromIndex int, toIndex int) List {
-	return RT.Subvec(a, fromIndex, toIndex).(List)
+	return RT.SubVec(a, fromIndex, toIndex).(List)
 }
+*/
 
 func (a *APersistentVector) Set(i int, o interface{}) interface{} {
 	panic(UnsupportedOperationException)
@@ -122,13 +148,13 @@ func (a *APersistentVector) Invoke(arg1 interface{}) interface{} {
 }
 
 // TODO
-func (a *APersistentVector) Iterator() Iterator {
+func (a *APersistentVector) Iterator() *Iterator {
 	return nil
 }
 
 func (a *APersistentVector) Peek() interface{} {
 	if a.Count() > 0 {
-		return a.Nth(a.Count() - 1)
+		return a.Nth(a.Count()-1, nil)
 	}
 	return nil
 }
@@ -144,8 +170,12 @@ func (a *APersistentVector) EntryAt(key interface{}) IMapEntry {
 }
 
 // TODO
-func (a *APersistentVector) Assoc(key interface{}, val interface{}) IPersistentVector {
+func (a *APersistentVector) Assoc(key interface{}, val interface{}) Associative {
 	return nil
+}
+
+func (a *APersistentVector) AssocN(i int, val interface{}) IPersistentVector {
+	panic(UnsupportedOperationException)
 }
 
 // TODO
@@ -158,7 +188,7 @@ func (a *APersistentVector) ValAt(key interface{}, notFound interface{}) interfa
 func (a *APersistentVector) ToArray() []interface{} {
 	ret := make([]interface{}, a.Count())
 	for i := 0; i < a.Count(); i++ {
-		ret[i] = a.Nth(i)
+		ret[i] = a.Nth(i, nil)
 	}
 	return ret
 }
@@ -168,6 +198,171 @@ func (a *APersistentVector) ToArray() []interface{} {
 // 	panic(UnsupportedOperationException)
 // }
 
-type PersistentVectorSeq struct{} // TODO
+// Declaration block: PersistentVectorSeq
 
-type PersistentVectorRSeq struct{} // TODO
+type PersistentVectorSeq struct {
+	*ASeq
+
+	_meta IPersistentMap
+	v     IPersistentVector
+	i     int
+}
+
+func (s *PersistentVectorSeq) First() interface{} {
+	return s.v.Nth(s.i, nil)
+}
+
+func (s *PersistentVectorSeq) Next() ISeq {
+	if (s.i + 1) < s.v.Count() {
+		return &PersistentVectorSeq{
+			v: s.v,
+			i: s.i + 1,
+		}
+	}
+	return nil
+}
+
+func (s *PersistentVectorSeq) Index() int {
+	return s.i
+}
+
+func (s *PersistentVectorSeq) Count() int {
+	return s.v.Count() - s.i
+}
+
+func (s *PersistentVectorSeq) WithMeta(meta IPersistentMap) *PersistentVectorSeq {
+	return &PersistentVectorSeq{
+		_meta: meta,
+		v:     s.v,
+		i:     s.i,
+	}
+}
+
+// TODO
+func (s *PersistentVectorSeq) Reduce(f IFn, start interface{}) interface{} {
+	return nil
+}
+
+// NOTE: Implements IndexedSeq, Counted
+type APersistentVectorRSeq struct {
+	*ASeq
+
+	_meta IPersistentMap
+	v     IPersistentVector
+	i     int
+}
+
+func (r *APersistentVectorRSeq) First() interface{} {
+	return r.v.Nth(r.i, nil)
+}
+
+func (r *APersistentVectorRSeq) Next() ISeq {
+	if r.i > 0 {
+		return &APersistentVectorRSeq{
+			v: r.v,
+			i: r.i - 1,
+		}
+	}
+	return nil
+}
+
+func (r *APersistentVectorRSeq) Index() int {
+	return r.i
+}
+
+func (r *APersistentVectorRSeq) Count() int {
+	return r.i + 1
+}
+
+func (r *APersistentVectorRSeq) WithMeta(meta IPersistentMap) *APersistentVectorRSeq {
+	return &APersistentVectorRSeq{
+		_meta: meta,
+		v:     r.v,
+		i:     r.i,
+	}
+}
+
+// NOTE: Implements IObj
+type SubVector struct {
+	*APersistentVector
+
+	_meta IPersistentMap
+	v     IPersistentVector
+	start int
+	end   int
+}
+
+// TODO: Custom SubVector initializer?
+
+// TODO
+func (r *SubVector) Iterator() *Iterator {
+	return nil
+}
+
+func (r *SubVector) Nth(i int, notFound interface{}) interface{} {
+	if (r.start+i) >= r.end || i < 0 {
+		panic(IndexOutOfBoundsException)
+	}
+	return r.v.Nth(r.start+i, notFound)
+}
+
+func (r *SubVector) AssocN(i int, val interface{}) IPersistentVector {
+	if (r.start + i) > r.end {
+		panic(IndexOutOfBoundsException)
+	} else if r.start+i == r.end {
+		return r.ConsIPersistentVector(val)
+	}
+	return &SubVector{
+		_meta: r._meta,
+		v:     r.v.AssocN(r.start+i, val),
+		start: r.start,
+		end:   r.end,
+	}
+}
+
+func (r *SubVector) Count() int {
+	return r.end - r.start
+}
+
+func (r *SubVector) ConsIPersistentVector(o interface{}) IPersistentVector {
+	return &SubVector{
+		_meta: r._meta,
+		v:     r.v.AssocN(r.end, o),
+		start: r.start,
+		end:   r.end,
+	}
+}
+
+func (r *SubVector) Empty() IPersistentCollection {
+	return nil
+	// return EMPTY_PERSISTENT_VECTOR.WithMeta(r.Meta()).(IPersistentCollection) // TODO: This is probably cheating.
+}
+
+func (r *SubVector) Pop() IPersistentStack {
+	if (r.end - 1) == r.start {
+		return nil
+		// return EMPTY_PERSISTENT_VECTOR.(IPersistentCollection) // TODO cheating again
+	}
+	return &SubVector{
+		_meta: r._meta,
+		v:     r.v,
+		start: r.start,
+		end:   r.end - 1,
+	}
+}
+
+func (r *SubVector) WithMeta(meta IPersistentMap) *SubVector {
+	if meta == r._meta {
+		return r
+	}
+	return &SubVector{
+		_meta: meta,
+		v:     r.v,
+		start: r.start,
+		end:   r.end,
+	}
+}
+
+func (r *SubVector) Meta() IPersistentMap {
+	return r._meta
+}

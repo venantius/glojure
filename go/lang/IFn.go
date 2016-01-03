@@ -4,5 +4,7 @@ package lang
 
 type IFn interface {
 	Invoke(args ...interface{}) interface{}
-	// TODO A lot of additional functions are left un-implemented
+	ApplyTo(arglist ISeq) interface{}
+
+	// TODO A lot of additional functions are left un-implemented, but I don't understand them
 }
