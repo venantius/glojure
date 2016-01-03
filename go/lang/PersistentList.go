@@ -1,7 +1,7 @@
 package lang
 
 import (
-	"container/list" // Golang linked list
+	"container/list" // linked list
 )
 
 /* Declaration block: Primordial */
@@ -14,29 +14,14 @@ func (p *Primordial) GetRequiredArity() int {
 	return 0
 }
 
-/*
 func (p *Primordial) doInvoke(args interface{}) interface{} {
 	switch args.(type) {
 	case ArraySeq:
 		argsarray := args.(ArraySeq).array
-		ret := EMPTY_PERSISTENT_LIST
+		var ret IPersistentList
+		ret = EMPTY_PERSISTENT_LIST
 		for i := len(argsarray) - 1; i >= 0; i-- {
 			ret = ret.ConsIPersistentCollection(argsarray[i]).(IPersistentList)
-		}
-		return ret
-	}
-	// TODO
-	return nil
-}
-
-// TODO
-func (p *Primordial) InvokeStatic(args ISeq) interface{} {
-	switch args.(type) {
-	case ArraySeq:
-		argsarray := args.(ArraySeq).array
-		ret := EMPTY_PERSISTENT_LIST
-		for i := len(argsarray) - 1; i >= 0; i-- {
-			ret = ret.Cons(argsarray[i]).(*PersistentList)
 		}
 		return ret
 	}
@@ -46,7 +31,24 @@ func (p *Primordial) InvokeStatic(args ISeq) interface{} {
 	}
 	return create(list)
 }
-*/
+
+func (p *Primordial) InvokeStatic(args ISeq) interface{} {
+	switch args.(type) {
+	case ArraySeq:
+		argsarray := args.(ArraySeq).array
+		var ret IPersistentList
+		ret = EMPTY_PERSISTENT_LIST
+		for i := len(argsarray) - 1; i >= 0; i-- {
+			ret = ret.ConsIPersistentCollection(argsarray[i]).(IPersistentList)
+		}
+		return ret
+	}
+	list := list.New()
+	for s := RT.Seq(args); s != nil; s = s.Next() {
+		list.PushBack(s.First())
+	}
+	return create(list)
+}
 
 func (p *Primordial) WithMeta(meta IPersistentMap) IObj {
 	// TODO: "UnsupportedOperationException()"

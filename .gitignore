@@ -3,6 +3,10 @@
 *.a
 *.so
 
+# intellij IDEA
+.idea
+*.iml
+
 # Folders
 _obj
 _test
