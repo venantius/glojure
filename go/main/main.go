@@ -3,6 +3,7 @@ package main
 import (
 	"clojure-go/go/lang"
 	"fmt"
+	// "murmur3"
 )
 
 func main() {
@@ -15,5 +16,7 @@ func main() {
 	fmt.Println(z)
 
 	fmt.Println("asdf"[3:])
+
+	fmt.Println(lang.HashInt(-1817438572))
 
 }
