@@ -1,0 +1,3 @@
+[submodule "vendor/murmur3"]
+	path = vendor/murmur3
+	url = git@github.com:spaolacci/murmur3.git

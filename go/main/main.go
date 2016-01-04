@@ -6,7 +6,6 @@ import (
 )
 
 func main() {
-	fmt.Println("Fuck!")
 	v := lang.CreateVector(1, 2)
 	fmt.Println(v.String())
 	y := v.Cons(3)
@@ -14,5 +13,7 @@ func main() {
 	z := v.AssocN(0, "other")
 	fmt.Println(z.String())
 	fmt.Println(z)
+
+	fmt.Println("asdf"[3:])
 
 }

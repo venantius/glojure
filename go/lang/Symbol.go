@@ -1,5 +1,9 @@
 package lang
 
+import (
+	"strings"
+)
+
 // NOTE: Implements IObj, Comparable, Named, Serializable, IHashEq
 type Symbol struct {
 	*AFn
@@ -30,14 +34,43 @@ func (s *Symbol) GetName() string {
 	return s.name
 }
 
-// TODO: method overloading
-func CreateSymbol(args ...interface{}) *Symbol {
-	return nil
+/*
+	NOTE: There's a note in the original Java code that `CreateSymbol`
+	only exists for backwards compatibility with code compiled against
+	earlier versions of Clojure
+*/
+func CreateSymbol(args ...string) *Symbol {
+	return Intern(args...)
 }
 
-// TODO: Method overloading
-func Intern(args ...interface{}) *Symbol {
-	return nil
+func InternNsAndName(ns string, name string) *Symbol {
+	return &Symbol{
+		ns:   ns,
+		name: name,
+	}
+}
+
+func InternNsname(nsname string) *Symbol {
+	i := strings.Index(nsname, "/")
+	if i == -1 || nsname == "/" {
+		return &Symbol{
+			name: nsname,
+		}
+	} else {
+		return &Symbol{
+			ns:   nsname[0:i],
+			name: nsname[i+1:],
+		}
+	}
+}
+
+func Intern(args ...string) *Symbol {
+	if len(args) == 1 {
+		return InternNsname(args[0])
+	} else if len(args) == 2 {
+		return InternNsAndName(args[0], args[1])
+	}
+	panic(WrongNumberOfArgumentsException)
 }
 
 func (s *Symbol) Equals(obj interface{}) bool {
@@ -77,7 +110,23 @@ func (s *Symbol) WithMeta(meta IPersistentMap) interface{} {
 
 // TODO
 func (s *Symbol) CompareTo(obj interface{}) int {
-	return 0
+	objS := obj.(Symbol)
+	if s.Equals(obj) {
+		return 0
+	}
+	if &s.ns == nil && &objS.ns != nil {
+		return -1
+	}
+	if &s.ns != nil {
+		if &objS.ns == nil {
+			return 1
+		}
+		nsc := StringCompareTo(s.ns, objS.ns)
+		if nsc != 0 {
+			return nsc
+		}
+	}
+	return StringCompareTo(s.name, objS.name)
 }
 
 func (s *Symbol) readResolve() interface{} {

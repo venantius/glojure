@@ -2,6 +2,8 @@
 ----------
 * So far I've been making different versions of Cons based on the various interfaces entailed. I think this is probably the wrong approach - so far everything that supports Cons seems to extend IPersistentCollection, so maybe instead we can just defined Cons at the IPersistentCollection interface level once and not for any of the sub-interfaces.
 
+* Clojure is heavily dependent on murmurhash3 for hashing equality. I think mmh3 is a great choice for a hashing function but unfortunately Go doesn't have an implementation in the standard library, so I'm going to need to find an acceptable dependency and use that.
+
 2016-01-02
 ----------
 * I've decided to return pointer types for any structs I'm working with. It would appear that specifying a return value of an interface expects a pointer type anyways, so this is actually a move in the direction of consistency.
