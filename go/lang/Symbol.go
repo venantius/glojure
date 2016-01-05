@@ -84,19 +84,18 @@ func (s *Symbol) Equals(obj interface{}) bool {
 		return false
 	}
 
-	// symbol := obj.(Symbol)
-
-	// TODO: Util.equals
-	return false
+	symbol := obj.(Symbol)
+	return s.ns == symbol.ns && s.name == symbol.name
 }
 
-// TODO
 func (s *Symbol) HashCode() int {
-	return 0
+	return Util.HashCombine(HashString(s.name), Util.Hash(s.ns))
 }
 
-// TODO
 func (s *Symbol) HashEq() int {
+	if s._hasheq == 0 {
+		s._hasheq = Util.HashCombine(HashString(s.name), Util.Hash(s.ns))
+	}
 	return 0
 }
 
@@ -108,7 +107,6 @@ func (s *Symbol) WithMeta(meta IPersistentMap) interface{} {
 	}
 }
 
-// TODO
 func (s *Symbol) CompareTo(obj interface{}) int {
 	objS := obj.(Symbol)
 	if s.Equals(obj) {
@@ -121,12 +119,12 @@ func (s *Symbol) CompareTo(obj interface{}) int {
 		if &objS.ns == nil {
 			return 1
 		}
-		nsc := StringCompareTo(s.ns, objS.ns)
+		nsc := Util.StringCompareTo(s.ns, objS.ns)
 		if nsc != 0 {
 			return nsc
 		}
 	}
-	return StringCompareTo(s.name, objS.name)
+	return Util.StringCompareTo(s.name, objS.name)
 }
 
 func (s *Symbol) readResolve() interface{} {

@@ -59,3 +59,5 @@ func IsComplex(o interface{}) bool {
 func IsNumeric(o interface{}) bool {
 	return IsInt(o) || IsUint(o) || IsFloat(o) || IsComplex(o)
 }
+
+// TODO: Everything else in this file
