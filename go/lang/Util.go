@@ -33,7 +33,12 @@ func (_ *equivNull) Equiv(k1 interface{}, k2 interface{}) bool {
 type equivEquals struct{}
 
 func (_ *equivEquals) Equiv(k1 interface{}, k2 interface{}) bool {
-	return k1.(IObj).Equals(k2)
+	switch obj := k1.(type) {
+	case IEquals:
+		return obj.Equals(k2)
+	default:
+		return obj == k2
+	}
 }
 
 type equivNumber struct{}

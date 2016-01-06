@@ -28,11 +28,11 @@ func (_ *rt) IsReduced(r interface{}) bool {
 // TODO....so much
 
 func (_ *rt) Seq(coll interface{}) ISeq {
-	switch coll.(type) {
-	case ASeq:
-		return coll.(*ASeq)
-	case LazySeq:
-		return coll.(*LazySeq).Seq()
+	switch c := coll.(type) {
+	case *ASeq:
+		return c
+	case *LazySeq:
+		return c.Seq()
 	}
 	return RT.seqFrom(coll)
 }

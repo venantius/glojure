@@ -1,7 +1,6 @@
 package lang
 
 type IPersistentCollection interface {
-	// IObj TODO (maybe AObj ?)
 	Counted
 	Seqable
 
