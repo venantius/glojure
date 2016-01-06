@@ -10,7 +10,7 @@ type mmh3 struct{}
 
 var Murmur3 = mmh3{}
 
-// Murmurhash an int
+// Hash an int32
 func HashInt(input int32) int {
 	if input == 0 {
 		return 0
@@ -21,20 +21,8 @@ func HashInt(input int32) int {
 		binary.LittleEndian,
 		input,
 	)
-
-	x := murmur3.New32()
-	x.Write(buf.Bytes())
-
-	var out int32
-	binary.Read(
-		bytes.NewReader(x.Sum(nil)),
-		binary.LittleEndian,
-		&out,
-	)
-	return int(out)
+	return hashBytes(buf.Bytes())
 }
-
-// TODO: The writer code is generic and should be turned into a private function here
 
 func HashLong(input int64) int {
 	if input == 0 {
@@ -46,30 +34,11 @@ func HashLong(input int64) int {
 		binary.LittleEndian,
 		input,
 	)
-
-	x := murmur3.New32()
-	x.Write(buf.Bytes())
-
-	var out int32
-	binary.Read(
-		bytes.NewReader(x.Sum(nil)),
-		binary.LittleEndian,
-		&out,
-	)
-	return int(out)
+	return hashBytes(buf.Bytes())
 }
 
 func HashString(input string) int {
-	x := murmur3.New32()
-	x.Write([]byte(input))
-
-	var out int32
-	binary.Read(
-		bytes.NewReader(x.Sum(nil)),
-		binary.LittleEndian,
-		&out,
-	)
-	return int(out)
+	return hashBytes([]byte(input))
 }
 
 // TODO
@@ -85,4 +54,17 @@ func HashOrdered(xs Iterable) int {
 // TODO
 func HashUnordered(xs Iterable) int {
 	panic(NotYetImplementedException)
+}
+
+func hashBytes(input []byte) int {
+	x := murmur3.New32()
+	x.Write(input)
+
+	var out int32
+	binary.Read(
+		bytes.NewReader(x.Sum(nil)),
+		binary.LittleEndian,
+		&out,
+	)
+	return int(out)
 }

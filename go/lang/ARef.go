@@ -41,14 +41,17 @@ func (a *ARef) RemoveWatch(key interface{}) IRef {
 
 // TODO
 func (a *ARef) NotifyWatches(oldval interface{}, newval interface{}) {
-	ws := a.watches
-	if ws.Count() > 0 {
-		for s := ws.Seq(); s != nil; s = s.Next() {
-			// NOTE this is a little different from the Java implementation
-			e := s.First().(IMapEntry) // TODO: huh?
-			fn := e.Val().(IFn)
-			if fn != nil {
-				fn.Invoke(e.Key(), a, oldval, newval)
+	// TODO: Remove this nil check
+	if a.watches != nil {
+		ws := a.watches
+		if ws.Count() > 0 {
+			for s := ws.Seq(); s != nil; s = s.Next() {
+				// NOTE this is a little different from the Java implementation
+				e := s.First().(IMapEntry) // TODO: huh?
+				fn := e.Val().(IFn)
+				if fn != nil {
+					fn.Invoke(e.Key(), a, oldval, newval)
+				}
 			}
 		}
 	}
