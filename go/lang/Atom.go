@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"fmt"
 	"sync/atomic"
 	"unsafe"
 )
@@ -23,17 +24,35 @@ import (
 	~ @venantius
 */
 
+/*
+	NOTE: Atoms must be initialized with the CreateAtom constructor. If not,
+	they will have their watcher field set to nil, which will cause a runtime
+	panic.
+*/
+
 // NOTE: Implements IAtom
 type Atom struct {
-	*ARef
+	ARef
+	validator IFn
+	watches   int // TODO: should be IPersistentMap
 
 	_meta IPersistentMap
-	state interface{} // AtomicReference
+	state unsafe.Pointer // AtomicReference
+}
+
+var EMPTY_PERSISTENT_MAP IPersistentMap
+
+func (a *Atom) Initialize() *Atom {
+	return &Atom{
+		validator: a.validator,
+		watches:   1,
+		_meta:     a._meta,
+		state:     a.state,
+	}
 }
 
 func (a *Atom) Deref() interface{} {
-	x := a.state.(unsafe.Pointer)
-	return atomic.LoadPointer(&x)
+	return atomic.LoadPointer(&a.state)
 }
 
 // TODO
@@ -43,7 +62,7 @@ func (a *Atom) Swap(f IFn, args ...interface{}) interface{} {
 
 func (a *Atom) CompareAndSet(oldv interface{}, newv interface{}) bool {
 	a.validate(nil, newv)
-	state := a.state.(unsafe.Pointer)
+	state := unsafe.Pointer(&a.state)
 	ret := atomic.CompareAndSwapPointer(
 		&state,
 		oldv.(unsafe.Pointer),
@@ -58,8 +77,12 @@ func (a *Atom) CompareAndSet(oldv interface{}, newv interface{}) bool {
 func (a *Atom) Reset(newval interface{}) interface{} {
 	oldval := a.Deref()
 	a.validate(nil, newval)
-	p := a.state.(unsafe.Pointer)
-	atomic.StorePointer(&p, newval.(unsafe.Pointer))
+	fmt.Println(newval)
+	p := unsafe.Pointer(&a.state)
+	atomic.StorePointer(&p, unsafe.Pointer(&newval))
+	fmt.Println(a)
 	a.NotifyWatches(oldval, newval)
+
+	fmt.Println(a)
 	return newval
 }
