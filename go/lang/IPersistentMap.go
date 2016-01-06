@@ -4,6 +4,6 @@ package lang
 type IPersistentMap interface {
 	Associative
 
-	assocEx(interface{}, interface{}) IPersistentMap
-	without(interface{}) IPersistentMap
+	AssocEx(interface{}, interface{}) IPersistentMap
+	Without(interface{}) IPersistentMap
 }
