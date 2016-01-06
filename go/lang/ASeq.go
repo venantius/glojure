@@ -10,7 +10,7 @@ type ASeq struct {
 }
 
 func (s *ASeq) ConsISeq(i interface{}) ISeq {
-	return Cons{_first: i, _more: s}
+	return &Cons{_first: i, _more: s}
 }
 
 // TODO: Implement
@@ -47,3 +47,5 @@ func (s *ASeq) Equiv(i interface{}) bool {
 func (s *ASeq) Seq() ISeq {
 	return s
 }
+
+// TODO: The rest of this file
