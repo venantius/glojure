@@ -166,11 +166,11 @@ func createVectorFromInterfaceSlice(items []interface{}) *PersistentVector {
 // constructor.
 func CreateVector(items ...interface{}) *PersistentVector {
 	ret := EMPTY_PERSISTENT_VECTOR
-	switch items[0].(type) {
+	switch item := items[0].(type) {
 	case IReduceInit:
-		ret = createVectorFromIReduceInit(items[0].(IReduceInit))
+		ret = createVectorFromIReduceInit(item)
 	case ISeq:
-		ret = createVectorFromISeq(items[0].(ISeq))
+		ret = createVectorFromISeq(item)
 	// TODO: uncomment me once we understand iterables in Go.
 	// case Iterable:
 	// 	ret = createVectorFromIterable(items[0].(Iterable))
@@ -717,9 +717,9 @@ func (t *TransientVector) editableArrayFor(i int) []interface{} {
 // Retrieve the value at the corresponding index of this TransientVector
 func (t *TransientVector) ValAt(key interface{}, notFound interface{}) interface{} {
 	t.ensureEditable()
-	switch key.(type) {
+	switch k := key.(type) {
 	case int:
-		i := key.(int)
+		i := k
 		if i >= 0 && i < t.cnt {
 			return t.Nth(i, nil)
 		}
@@ -728,9 +728,9 @@ func (t *TransientVector) ValAt(key interface{}, notFound interface{}) interface
 }
 
 func (t *TransientVector) Invoke(arg1 interface{}) interface{} {
-	switch arg1.(type) {
+	switch a := arg1.(type) {
 	case int:
-		return t.Nth(arg1.(int), nil)
+		return t.Nth(a, nil)
 	default:
 		panic(errors.New("Key must be integer"))
 	}
@@ -766,9 +766,9 @@ func (t *TransientVector) AssocN(i int, val interface{}) *TransientVector {
 
 // Associate a new value at the given key. Key must be an integer.
 func (t *TransientVector) Assoc(key interface{}, val interface{}) *TransientVector {
-	switch key.(type) {
+	switch k := key.(type) {
 	case int:
-		return t.AssocN(key.(int), val)
+		return t.AssocN(k, val)
 	}
 	panic("Key must be integer")
 }

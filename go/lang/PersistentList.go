@@ -15,9 +15,9 @@ func (p *Primordial) GetRequiredArity() int {
 }
 
 func (p *Primordial) doInvoke(args interface{}) interface{} {
-	switch args.(type) {
+	switch a := args.(type) {
 	case ArraySeq:
-		argsarray := args.(ArraySeq).array
+		argsarray := a.array
 		var ret IPersistentList
 		ret = EMPTY_PERSISTENT_LIST
 		for i := len(argsarray) - 1; i >= 0; i-- {
@@ -33,9 +33,9 @@ func (p *Primordial) doInvoke(args interface{}) interface{} {
 }
 
 func (p *Primordial) InvokeStatic(args ISeq) interface{} {
-	switch args.(type) {
+	switch a := args.(type) {
 	case ArraySeq:
-		argsarray := args.(ArraySeq).array
+		argsarray := a.array
 		var ret IPersistentList
 		ret = EMPTY_PERSISTENT_LIST
 		for i := len(argsarray) - 1; i >= 0; i-- {

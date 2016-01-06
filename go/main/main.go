@@ -17,6 +17,16 @@ func main() {
 
 	fmt.Println("asdf"[3:])
 
-	fmt.Println(lang.HashInt(-1817438572))
+	fmt.Println(lang.HashString("bananas in pajamas"))
+
+	x := 5
+	switch interface{}(x).(type) {
+	case int32:
+		fmt.Println("int32")
+	case int:
+		fmt.Println("int")
+	default:
+		fmt.Println("stuff")
+	}
 
 }
