@@ -44,10 +44,11 @@ func (a *ARef) NotifyWatches(oldval interface{}, newval interface{}) {
 	ws := a.watches
 	if ws.Count() > 0 {
 		for s := ws.Seq(); s != nil; s = s.Next() {
-			e := s.First().Map.Entry // TODO: huh?
-			fn := e.GetValue()
+			// NOTE this is a little different from the Java implementation
+			e := s.First().(IMapEntry) // TODO: huh?
+			fn := e.Val().(IFn)
 			if fn != nil {
-				fn.Invoke(e.GetKey(), a, oldval, newval)
+				fn.Invoke(e.Key(), a, oldval, newval)
 			}
 		}
 	}

@@ -60,4 +60,17 @@ func IsNumeric(o interface{}) bool {
 	return IsInt(o) || IsUint(o) || IsFloat(o) || IsComplex(o)
 }
 
+/*
+	Static methods
+*/
+
+type num struct{}
+
+var Numbers = num{}
+
+// TODO
+func (_ *num) Equal(a interface{}, b interface{}) bool {
+	return true
+}
+
 // TODO: Everything else in this file

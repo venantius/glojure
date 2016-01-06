@@ -3,7 +3,7 @@ package lang
 // May need to be refactored
 type IPersistentSet interface {
 	IPersistentCollection
-	Counted
+	// Counted
 
 	Disjoin(key interface{}) IPersistentSet
 	Contains(key interface{}) bool

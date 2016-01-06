@@ -21,7 +21,7 @@ func (p *Primordial) doInvoke(args interface{}) interface{} {
 		var ret IPersistentList
 		ret = EMPTY_PERSISTENT_LIST
 		for i := len(argsarray) - 1; i >= 0; i-- {
-			ret = ret.ConsIPersistentCollection(argsarray[i]).(IPersistentList)
+			ret = ret.Cons(argsarray[i]).(IPersistentList)
 		}
 		return ret
 	}
@@ -39,7 +39,7 @@ func (p *Primordial) InvokeStatic(args ISeq) interface{} {
 		var ret IPersistentList
 		ret = EMPTY_PERSISTENT_LIST
 		for i := len(argsarray) - 1; i >= 0; i-- {
-			ret = ret.ConsIPersistentCollection(argsarray[i]).(IPersistentList)
+			ret = ret.Cons(argsarray[i]).(IPersistentList)
 		}
 		return ret
 	}
@@ -76,7 +76,7 @@ func create(init *list.List) IPersistentList {
 	var ret IPersistentList
 	ret = EMPTY_PERSISTENT_LIST
 	for i := init.Back(); i != nil; i = i.Prev() {
-		ret = ret.ConsIPersistentCollection(i).(IPersistentList)
+		ret = ret.Cons(i).(IPersistentList)
 	}
 	return ret
 }
@@ -107,7 +107,7 @@ func (l *PersistentList) Count() int {
 	return l._count
 }
 
-func (l *PersistentList) ConsIPersistentCollection(i interface{}) IPersistentCollection {
+func (l *PersistentList) Cons(i interface{}) IPersistentCollection {
 	return &PersistentList{
 		_meta:  l.Meta(),
 		_first: i,
@@ -198,7 +198,7 @@ func (e *EmptyList) More() ISeq {
 	return e
 }
 
-func (e *EmptyList) ConsISeq(i interface{}) ISeq {
+func (e *EmptyList) Cons(i interface{}) IPersistentCollection {
 	return &PersistentList{
 		_meta:  e.Meta(),
 		_first: i,

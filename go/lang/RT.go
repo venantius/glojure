@@ -68,3 +68,10 @@ func (_ *rt) Get(coll interface{}, key interface{}, notFound interface{}) interf
 	}
 	return RT.getFrom(coll, key, notFound)
 }
+
+// unordered
+
+// TODO
+func (_ *rt) Count(o interface{}) int {
+	return 0
+}

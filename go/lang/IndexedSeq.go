@@ -3,7 +3,7 @@ package lang
 type IndexedSeq interface {
 	ISeq
 	Sequential
-	Counted
+	// Counted
 
 	Index() int
 }
