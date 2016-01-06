@@ -10,7 +10,7 @@ type IPersistentVector interface {
 	// IPersistentCollection
 	Seqable
 
-	ConsIPersistentCollection(o interface{}) IPersistentCollection
+	Cons(o interface{}) IPersistentCollection
 	Empty() IPersistentCollection
 	Equiv(o interface{}) bool
 
@@ -27,5 +27,4 @@ type IPersistentVector interface {
 	Length() int
 	Assoc(key interface{}, val interface{}) Associative
 	AssocN(i int, val interface{}) IPersistentVector
-	ConsIPersistentVector(i interface{}) IPersistentVector
 }

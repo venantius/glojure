@@ -33,11 +33,7 @@ func (a *APersistentVector) Count() int {
 	panic(UnsupportedOperationException)
 }
 
-func (a *APersistentVector) ConsIPersistentCollection(i interface{}) IPersistentCollection {
-	panic(UnsupportedOperationException)
-}
-
-func (a *APersistentVector) ConsIPersistentVector(i interface{}) IPersistentVector {
+func (a *APersistentVector) Cons(i interface{}) IPersistentCollection {
 	panic(UnsupportedOperationException)
 }
 
@@ -310,7 +306,7 @@ func (r *SubVector) AssocN(i int, val interface{}) IPersistentVector {
 	if (r.start + i) > r.end {
 		panic(IndexOutOfBoundsException)
 	} else if r.start+i == r.end {
-		return r.ConsIPersistentVector(val)
+		return r.Cons(val).(IPersistentVector)
 	}
 	return &SubVector{
 		_meta: r._meta,
@@ -324,7 +320,7 @@ func (r *SubVector) Count() int {
 	return r.end - r.start
 }
 
-func (r *SubVector) ConsIPersistentVector(o interface{}) IPersistentVector {
+func (r *SubVector) Cons(o interface{}) IPersistentCollection {
 	return &SubVector{
 		_meta: r._meta,
 		v:     r.v.AssocN(r.end, o),

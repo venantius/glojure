@@ -1,11 +1,12 @@
 package lang
 
 type IPersistentCollection interface {
+	// IObj TODO (maybe AObj ?)
 	Counted
 	Seqable
 
 	// TODO: replace with Cons
-	ConsIPersistentCollection(o interface{}) IPersistentCollection
+	Cons(o interface{}) IPersistentCollection
 	Empty() IPersistentCollection
 	Equiv(o interface{}) bool
 }

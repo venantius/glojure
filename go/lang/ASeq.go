@@ -9,7 +9,7 @@ type ASeq struct {
 	_hasheq int
 }
 
-func (s *ASeq) ConsISeq(i interface{}) ISeq {
+func (s *ASeq) Cons(i interface{}) IPersistentCollection {
 	return &Cons{_first: i, _more: s}
 }
 
@@ -46,6 +46,16 @@ func (s *ASeq) Equiv(i interface{}) bool {
 
 func (s *ASeq) Seq() ISeq {
 	return s
+}
+
+// TODO
+func (s *ASeq) Count() int {
+	return 0
+}
+
+// TODO
+func (s *ASeq) Empty() IPersistentCollection {
+	return nil
 }
 
 // TODO: The rest of this file

@@ -33,7 +33,7 @@ func (_ *equivNull) Equiv(k1 interface{}, k2 interface{}) bool {
 type equivEquals struct{}
 
 func (_ *equivEquals) Equiv(k1 interface{}, k2 interface{}) bool {
-	return k1.Equals(k2)
+	return k1.(IObj).Equals(k2)
 }
 
 type equivNumber struct{}
@@ -60,13 +60,14 @@ func (_ *equivColl) Equiv(k1 interface{}, k2 interface{}) bool {
 	if coll {
 		return Util.PCEquiv(k1, k2)
 	}
-	return k1.(IPersistentCollection).Equals(k2)
+	// return k1.(IPersistentCollection).Equals(k2) TODO
+	return false
 }
 
 // Back to Util functions
 
 // TODO
-func (_ *util) EquivPred(k1) EquivPred {
+func (_ *util) EquivPred(k1 interface{}) EquivPred {
 	return nil
 }
 
@@ -90,6 +91,11 @@ func (_ *util) Hash(i interface{}) int {
 	// HashCode and then otherwise dispatch directly to one of the various
 	// hashing methods in Murmur3.go
 	return 1 // i.HashCode()
+}
+
+// TODO
+func (_ *util) HashCombine(k1 interface{}, k2 interface{}) int {
+	return 0
 }
 
 /*
