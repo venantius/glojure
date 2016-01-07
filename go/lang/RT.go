@@ -80,3 +80,8 @@ func (_ *rt) Count(o interface{}) int {
 func (_ *rt) PrintString(o interface{}) string {
 	return ""
 }
+
+// TODO
+func (_ *rt) ToArray(coll interface{}) []interface{} {
+	return nil
+}

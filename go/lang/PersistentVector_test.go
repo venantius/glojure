@@ -1,7 +1,6 @@
 package lang
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -22,7 +21,6 @@ func TestCreateVector(t *testing.T) {
 func TestCons(t *testing.T) {
 	initial := CreateVector(1, 2)
 
-	fmt.Println(initial)
 	result := initial.Cons(3)
 	if result.Count() != 3 {
 		t.Error("Failed to add element to PersistentVector with Cons")

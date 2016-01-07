@@ -33,9 +33,9 @@ var EMPTY_PERSISTENT_ARRAY_MAP = &PersistentArrayMap{
 // This probably needs a utility function that returns an iterator.
 func CreatePersistentArrayMapFromMap(other map[interface{}]interface{}) IPersistentMap {
 	ret := EMPTY_PERSISTENT_ARRAY_MAP.AsTransient()
-	for o := other.EntrySet().Seq(); o != nil; o = o.Next() {
-		e := o.(IMapEntry)
-		ret = ret.Assoc(o.GetKey(), o.GetValue()).(*TransientArrayMap)
+	for o := MapEntrySet(other).Seq(); o != nil; o = o.Next() {
+		e := o.First().(MapEntry)
+		ret = ret.Assoc(e.GetKey(), e.GetValue()).(*TransientArrayMap)
 	}
 	return ret.Persistent().(*PersistentArrayMap)
 }
@@ -152,7 +152,7 @@ func (p *PersistentArrayMap) AssocEx(key interface{}, val interface{}) IPersiste
 		if len(p.array) > HASHABLE_THRESHOLD {
 			return p.createHT(p.array).AssocEx(key, val)
 		}
-		newArray := make([]interface{}, len(p.array)+2)
+		newArray = make([]interface{}, len(p.array)+2)
 		if len(p.array) > 0 {
 			copy(newArray, p.array)
 		}
