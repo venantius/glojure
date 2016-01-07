@@ -1,3 +1,8 @@
+2016-01-06
+----------
+* I've been embedding structs incorrectly. Embedding with pointers is acceptable for some use cases, but not the ones I wanted (where the "concrete class" passes along its full struct to the "abstract class" pointer receiver). I've started to refactor this a bit but it's possible I've missed something - TL;DR, any struct embedding should not be by pointer.
+* I haven't yet figured out what the right constructor / initialization pattern is. Many of these data structures start out with default values, which isn't something Go supports by design. I'll need to figure something out at some point - maybe calling Initialize() on new structs, or using a constructor function like CreatePersistentArrayMap() (which is what I ended up doing with vectors).
+
 2016-01-03
 ----------
 * So far I've been making different versions of Cons based on the various interfaces entailed. I think this is probably the wrong approach - so far everything that supports Cons seems to extend IPersistentCollection, so maybe instead we can just defined Cons at the IPersistentCollection interface level once and not for any of the sub-interfaces.

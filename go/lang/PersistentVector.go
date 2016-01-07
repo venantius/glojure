@@ -9,7 +9,9 @@ var emptyVectorPopError = "Can't pop empty vector."
 
 // NOTE: Implements IObj, IEditableCollection, IReduce, IKVReduce
 type PersistentVector struct {
-	*APersistentVector
+	APersistentVector
+	_hash   int
+	_hasheq int
 
 	cnt   int // count
 	shift uint
@@ -54,7 +56,6 @@ var EMPTY_PERSISTENT_VECTOR = &PersistentVector{
 */
 type transientVectorConj struct {
 	AFn
-	IFn // maybe?
 }
 
 // Original method is overloaded.
@@ -435,8 +436,11 @@ func (v *PersistentVector) KVReduce(f IFn, init interface{}) interface{} {
 
 // NOTE: implements IChunkedSeq, Counted
 type ChunkedSeq struct {
-	*ASeq
+	ASeq
+	_hash   int
+	_hasheq int
 
+	_meta  IPersistentMap
 	vec    PersistentVector
 	node   []interface{}
 	i      int
@@ -567,8 +571,9 @@ func (v *PersistentVector) popTail(level uint, node *Node) *Node {
 
 // NOTE: Implements ITransientVector, Counted
 type TransientVector struct {
-	*AFn
+	AFn
 
+	_meta IPersistentMap
 	cnt   int
 	shift uint
 	root  *Node

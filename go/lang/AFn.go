@@ -1,36 +1,32 @@
 package lang
 
-import (
-	"errors"
-)
-
 type AFn struct{}
 
-func (a *AFn) call() interface{} {
-	return a.invoke()
+func (a *AFn) Call() interface{} {
+	return a.Invoke()
 }
 
-func (a *AFn) run() {
-	a.invoke()
+func (a *AFn) Run() {
+	a.Invoke()
 }
 
 // This should be overwritten by the sub-type
 // TODO: some level of implementation detail
-func (a *AFn) invoke(args ...interface{}) interface{} {
-	panic(errors.New("Not implemented"))
+func (a *AFn) Invoke(args ...interface{}) interface{} {
+	panic(AbstractClassMethodException)
 }
 
 // TODO: Implement me!
-func (a *AFn) applyTo(arglist ISeq) interface{} {
+func (a *AFn) ApplyTo(arglist ISeq) interface{} {
 	return nil
 }
 
 // TODO: Implement me!
-func applyToHelper(ifn IFn, arglist ISeq) interface{} {
+func ApplyToHelper(ifn IFn, arglist ISeq) interface{} {
 	return nil
 }
 
 // TODO: Implement me!
-func (a *AFn) throwArity(n int) interface{} {
+func (a *AFn) ThrowArity(n int) interface{} {
 	return nil
 }

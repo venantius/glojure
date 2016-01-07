@@ -1,51 +1,55 @@
 package lang
 
-// TODO: Extends Obj
 // NOTE: Implements ISeq, Sequential, List, Serializable, IHashEq
 type ASeq struct {
-	*Obj
+	Obj
 
 	_hash   int
 	_hasheq int
 }
 
-func (s *ASeq) Cons(i interface{}) IPersistentCollection {
-	return &Cons{_first: i, _more: s}
+func (s *ASeq) String() string {
+	return RT.PrintString(s)
 }
 
-// TODO: Implement
-func (s *ASeq) Next() ISeq {
-	return nil
-}
-
-// TODO: Implement
-func (s *ASeq) More() ISeq {
-	return nil
-}
-
-// TODO: Implement
-func (s *ASeq) First() interface{} {
-	return nil
+func (s *ASeq) Empty() IPersistentCollection {
+	return EMPTY_PERSISTENT_LIST
 }
 
 func (s *ASeq) Equiv(i interface{}) bool {
 	var b bool
 	switch i.(type) {
 	case Sequential:
-		b = false
+		b = true
 	case List:
-		b = false
+		b = true
 	}
-	if b == false {
+	if b == true {
 		return false
 	}
 	ms := RT.Seq(i)
-	// TODO: some other stuff here
+
+	for x := s.Seq(); x != nil; x, ms = x.Next(), ms.Next() {
+		if ms == nil || !Util.Equiv(x.First(), ms.First()) {
+			return false
+		}
+	}
 	return ms == nil
 }
 
-func (s *ASeq) Seq() ISeq {
-	return s
+// TODO
+func (s *ASeq) Equals(ob interface{}) bool {
+	return true
+}
+
+//TODO
+func (s *ASeq) HashCode() int {
+	return 0
+}
+
+// TODO
+func (s *ASeq) HashEq() int {
+	return 0
 }
 
 // TODO
@@ -53,9 +57,29 @@ func (s *ASeq) Count() int {
 	return 0
 }
 
-// TODO
-func (s *ASeq) Empty() IPersistentCollection {
+func (s *ASeq) Seq() ISeq {
+	return s
+}
+
+func (s *ASeq) Cons(i interface{}) IPersistentCollection {
+	return &Cons{_first: i, _more: s}
+}
+
+// TODO: Implement
+func (s *ASeq) More() ISeq {
 	return nil
 }
 
-// TODO: The rest of this file
+/*
+	Abstract methods below here.
+*/
+
+func (s *ASeq) Next() ISeq {
+	panic(AbstractClassMethodException)
+}
+
+func (s *ASeq) First() interface{} {
+	panic(AbstractClassMethodException)
+}
+
+// TODO: The rest of this file. In particular there is java.util.Collection stuff, and....idk.

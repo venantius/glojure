@@ -75,3 +75,8 @@ func (_ *rt) Get(coll interface{}, key interface{}, notFound interface{}) interf
 func (_ *rt) Count(o interface{}) int {
 	return 0
 }
+
+// TODO
+func (_ *rt) PrintString(o interface{}) string {
+	return ""
+}
