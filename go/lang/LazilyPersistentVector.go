@@ -21,6 +21,6 @@ func CreateLazilyPersistentVector(obj interface{}) IPersistentVector {
 	case ISeq:
 		return CreateVectorFromISeq(o)
 	default:
-		return CreateOwningLazilyPersistentVector(RT.toArray(obj))
+		return CreateOwningLazilyPersistentVector(RT.ToArray(obj))
 	}
 }
