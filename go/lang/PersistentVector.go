@@ -80,13 +80,13 @@ func adopt(items []interface{}) *PersistentVector {
 	}
 }
 
-func createVectorFromIReduceInit(items IReduceInit) *PersistentVector {
+func CreateVectorFromIReduceInit(items IReduceInit) *PersistentVector {
 	ret := EMPTY_PERSISTENT_VECTOR.AsTransient()
 	items.ReduceWithInit(&TRANSIENT_VECTOR_CONJ, ret)
 	return ret.Persistent()
 }
 
-func createVectorFromISeq(items ISeq) *PersistentVector {
+func CreateVectorFromISeq(items ISeq) *PersistentVector {
 	arr := make([]interface{}, NODE_SIZE)
 	i := 0
 	for ; items != nil && i < NODE_SIZE; items = items.Next() {
@@ -126,7 +126,7 @@ func createVectorFromISeq(items ISeq) *PersistentVector {
 
 // TODO: This is complicated because it's tied to java.util.List, which is an
 // abstraction that doesn't seem to exist in Go
-func createVectorFromList(list *List) *PersistentVector {
+func CreateVectorFromList(list *List) *PersistentVector {
 	size := list.Size()
 	if size <= NODE_SIZE {
 		return &PersistentVector{
@@ -144,7 +144,7 @@ func createVectorFromList(list *List) *PersistentVector {
 }
 
 // TODO: Review idiomatic iterators in Go, don't try to copy this from Java.
-func createVectorFromIterable(items Iterable) *PersistentVector {
+func CreateVectorFromIterable(items Iterable) *PersistentVector {
 	// TODO: if arraylist, use createVectorFromList
 	// iter := items.Iterator()
 	ret := EMPTY_PERSISTENT_VECTOR.AsTransient()
@@ -155,7 +155,7 @@ func createVectorFromIterable(items Iterable) *PersistentVector {
 	return ret.Persistent()
 }
 
-func createVectorFromInterfaceSlice(items []interface{}) *PersistentVector {
+func CreateVectorFromInterfaceSlice(items []interface{}) *PersistentVector {
 	ret := EMPTY_PERSISTENT_VECTOR.AsTransient()
 	for _, item := range items {
 		ret = ret.Conj(item)
@@ -169,14 +169,14 @@ func CreateVector(items ...interface{}) *PersistentVector {
 	ret := EMPTY_PERSISTENT_VECTOR
 	switch item := items[0].(type) {
 	case IReduceInit:
-		ret = createVectorFromIReduceInit(item)
+		ret = CreateVectorFromIReduceInit(item)
 	case ISeq:
-		ret = createVectorFromISeq(item)
+		ret = CreateVectorFromISeq(item)
 	// TODO: uncomment me once we understand iterables in Go.
 	// case Iterable:
-	// 	ret = createVectorFromIterable(items[0].(Iterable))
+	// 	ret = CreateVectorFromIterable(items[0].(Iterable))
 	default:
-		ret = createVectorFromInterfaceSlice(items)
+		ret = CreateVectorFromInterfaceSlice(items)
 	}
 	return ret
 }
@@ -247,7 +247,7 @@ func (v PersistentVector) String() string {
 }
 
 // Assoc in a new value at the index.
-func (v *PersistentVector) AssocN(i int, val interface{}) *PersistentVector {
+func (v *PersistentVector) AssocN(i int, val interface{}) IPersistentVector {
 	if i >= 0 && i < v.cnt {
 		if i >= v.tailoff() {
 			newTail := make([]interface{}, len(v.tail))
@@ -270,7 +270,7 @@ func (v *PersistentVector) AssocN(i int, val interface{}) *PersistentVector {
 		}
 	}
 	if i == v.cnt {
-		return v.Cons(val)
+		return v.Cons(val).(*PersistentVector)
 	}
 	panic(IndexOutOfBoundsException)
 }
@@ -334,7 +334,7 @@ func (v *PersistentVector) pushTail(level uint, parent *Node, tailnode *Node) *N
 	return ret
 }
 
-func (v *PersistentVector) Cons(val interface{}) *PersistentVector {
+func (v *PersistentVector) Cons(val interface{}) IPersistentCollection {
 	if v.cnt-v.tailoff() < NODE_SIZE {
 		newTail := make([]interface{}, len(v.tail)+1)
 		copy(newTail, v.tail)
@@ -504,11 +504,11 @@ func (c *ChunkedSeq) Count() int {
 }
 
 // Empty the vector's contents.
-func (v *PersistentVector) Empty() *PersistentVector {
+func (v *PersistentVector) Empty() IPersistentCollection {
 	return EMPTY_PERSISTENT_VECTOR.WithMeta(v.Meta())
 }
 
-func (v *PersistentVector) Pop() *PersistentVector {
+func (v *PersistentVector) Pop() IPersistentStack {
 	if v.cnt == 0 {
 		panic(emptyVectorPopError)
 	}
