@@ -24,7 +24,7 @@ const (
 	HASHABLE_THRESHOLD = 16
 )
 
-var EMPTY_PERSISTENT_ARRAY_MAP = PersistentArrayMap{
+var EMPTY_PERSISTENT_ARRAY_MAP = &PersistentArrayMap{
 	array: make([]interface{}, HASHABLE_THRESHOLD), // NOTE: the length might be wrong.
 	_meta: nil,
 }
@@ -35,9 +35,9 @@ func CreatePersistentArrayMapFromMap(other map[interface{}]interface{}) IPersist
 	ret := EMPTY_PERSISTENT_ARRAY_MAP.AsTransient()
 	for o := other.EntrySet().Seq(); o != nil; o = o.Next() {
 		e := o.(IMapEntry)
-		ret = ret.Assoc(o.GetKey(), o.GetValue())
+		ret = ret.Assoc(o.GetKey(), o.GetValue()).(*TransientArrayMap)
 	}
-	return ret.Persistent()
+	return ret.Persistent().(*PersistentArrayMap)
 }
 
 func (m *PersistentArrayMap) WithMeta(meta IPersistentMap) *PersistentArrayMap {
@@ -53,8 +53,10 @@ func (m *PersistentArrayMap) create(init ...interface{}) *PersistentArrayMap {
 	}
 }
 
+// TODO
 func (m *PersistentArrayMap) createHT(init []interface{}) IPersistentMap {
-	return PersistentHashMap.Create(m.Meta(), init)
+	// return PersistentHashMap.Create(m.Meta(), init)
+	return nil
 }
 
 func CreatePersistentArrayMapWithCheck(init []interface{}) *PersistentArrayMap {
@@ -157,11 +159,13 @@ func (p *PersistentArrayMap) AssocEx(key interface{}, val interface{}) IPersiste
 		newArray[0] = key
 		newArray[1] = val
 	}
-	return create(newArray)
+	// TODO: Figure out why the following tries to use the PersistenList constructor
+	// return create(newArray)
+	return nil
 }
 
 // TODO
-func (p *PersistentArrayMap) Assoc(key interface{}, val interface{}) IPersistentMap {
+func (p *PersistentArrayMap) Assoc(key interface{}, val interface{}) Associative {
 	return nil
 }
 
@@ -171,8 +175,8 @@ func (p *PersistentArrayMap) Without(key interface{}) IPersistentMap {
 }
 
 // TODO
-func (p *PersistentArrayMap) Empty() IPersistentMap {
-	return EMPTY_PERSISTENT_MAP.WithMeta(p.Meta())
+func (p *PersistentArrayMap) Empty() IPersistentCollection {
+	return EMPTY_PERSISTENT_ARRAY_MAP.WithMeta(p.Meta())
 }
 
 // TODO
@@ -237,7 +241,7 @@ func (p *PersistentArrayMap) KVReduce(f IFn, init interface{}) interface{} {
 	return init
 }
 
-func (p *PersistentArrayMap) AsTransient() ITransientMap {
+func (p *PersistentArrayMap) AsTransient() *TransientArrayMap {
 	newArr := make([]interface{}, len(p.array))
 	copy(newArr, p.array)
 	return &TransientArrayMap{
@@ -323,7 +327,7 @@ func (t *TransientArrayMap) doAssoc(key interface{}, val interface{}) ITransient
 		t.array[t.len] = val
 
 	}
-	return *t
+	return t
 }
 
 // TODO
@@ -341,7 +345,7 @@ func (t *TransientArrayMap) doCount() int {
 }
 
 // TODO
-func (t *TransientArrayMap) doPersistent() IPersistentMap {
+func (t *TransientArrayMap) doPersistent() IPersistentCollection {
 	return nil
 }
 
