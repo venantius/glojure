@@ -34,7 +34,7 @@ func (p *Primordial) doInvoke(args interface{}) interface{} {
 
 func (p *Primordial) InvokeStatic(args ISeq) interface{} {
 	switch a := args.(type) {
-	case ArraySeq:
+	case *ArraySeq:
 		argsarray := a.array
 		var ret IPersistentList
 		ret = EMPTY_PERSISTENT_LIST

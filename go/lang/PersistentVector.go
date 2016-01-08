@@ -114,7 +114,7 @@ func CreateVectorFromISeq(items ISeq) *PersistentVector {
 		}
 	} else {
 		arr2 := make([]interface{}, i)
-		copy(arr2, arr)
+		copy(arr2[:i], arr[:i])
 		return &PersistentVector{
 			cnt:   i,
 			shift: VECTOR_SHIFT,
@@ -517,7 +517,7 @@ func (v *PersistentVector) Pop() IPersistentStack {
 	}
 	if (v.cnt - v.tailoff()) > 1 {
 		newTail := make([]interface{}, len(v.tail)-1)
-		copy(newTail, v.tail)
+		copy(newTail[:len(newTail)], v.tail[:len(newTail)])
 		return &PersistentVector{
 			_meta: v.Meta(),
 			cnt:   v.cnt - 1,
@@ -588,7 +588,7 @@ func (t *TransientVector) Count() int {
 func (t *TransientVector) ensureEditable() {
 	// NOTE: t.root.edit.get(), atomically in Java
 	if t.root.edit == false {
-		panic("Transient used after persistent! call")
+		panic(TransientUsedAfterPersistentCallError)
 	}
 }
 
@@ -614,7 +614,7 @@ func (t *TransientVector) Persistent() *PersistentVector {
 	t.ensureEditable()
 	t.root.edit = false
 	trimmedTail := make([]interface{}, t.cnt-t.tailoff())
-	copy(trimmedTail, t.tail)
+	copy(trimmedTail[:len(trimmedTail)], t.tail[:len(trimmedTail)])
 	return &PersistentVector{
 		cnt:   t.cnt,
 		shift: t.shift,
@@ -625,7 +625,7 @@ func (t *TransientVector) Persistent() *PersistentVector {
 
 func editableTail(t []interface{}) []interface{} {
 	arr := make([]interface{}, NODE_SIZE)
-	copy(arr, t)
+	copy(arr[:len(t)], t[:len(t)])
 	return arr
 }
 

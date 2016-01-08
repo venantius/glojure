@@ -85,3 +85,38 @@ func (_ *rt) PrintString(o interface{}) string {
 func (_ *rt) ToArray(coll interface{}) []interface{} {
 	return nil
 }
+
+func (_ *rt) Cons(x interface{}, coll interface{}) ISeq {
+	if coll == nil {
+		return &PersistentList{
+			_first: x,
+			_rest:  nil,
+			_count: 1,
+		}
+	}
+	switch c := coll.(type) {
+	case ISeq:
+		return &Cons{
+			_first: x,
+			_more:  c,
+		}
+	default:
+		return &Cons{
+			_first: x,
+			_more:  RT.Seq(coll),
+		}
+	}
+
+}
+
+func (_ *rt) Next(x interface{}) ISeq {
+	switch s := x.(type) {
+	case ISeq:
+		return s.Next()
+	}
+	seq := RT.Seq(x)
+	if seq == nil {
+		return nil
+	}
+	return seq.Next()
+}
