@@ -99,6 +99,11 @@ func (_ *util) Hash(i interface{}) int {
 }
 
 // TODO
+func (_ *util) HashEq(o interface{}) int {
+	return 0
+}
+
+// TODO
 func (_ *util) HashCombine(k1 interface{}, k2 interface{}) int {
 	return 0
 }

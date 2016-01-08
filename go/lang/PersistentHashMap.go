@@ -52,18 +52,58 @@ func CreatePersistentHashMapWithCheck(init interface{}) *PersistentHashMap {
 	return nil
 }
 
-// TODO
-func (m *PersistentHashMap) ContainsKey(key interface{}) bool {
-	return true
+func hashPersistentHashMap(k interface{}) int {
+	return Util.HashEq(k)
 }
 
-// TODO
+func (m *PersistentHashMap) ContainsKey(key interface{}) bool {
+	if key == nil {
+		return m.hasNull
+	}
+	if m.root != nil {
+		return m.root.Find(0, hashPersistentHashMap(key), key, NOT_FOUND) != NOT_FOUND
+	} else {
+		return false
+	}
+}
+
 func (m *PersistentHashMap) EntryAt(key interface{}) IMapEntry {
-	return nil
+	if key == nil {
+		if m.hasNull {
+			return CreateMapEntry(nil, m.nullValue)
+		} else {
+			return nil
+		}
+	}
+	if m.root != nil {
+		return m.root.Find(0, hashPersistentHashMap(key), key, nil)
+	} else {
+		return nil
+	}
 }
 
 // TODO
 func (m *PersistentHashMap) Assoc(key interface{}, val interface{}) Associative {
+	if key == nil {
+		if m.hasNull && val == m.nullValue {
+			return m
+		}
+		var c int
+		if hasNull {
+			c = m.count
+		} else {
+			c = m.count + 1
+		}
+		return &PersistentHashMap{
+			meta:      m.Meta(),
+			count:     c,
+			root:      m.root,
+			hasNull:   true,
+			nullValue: val,
+		}
+	}
+	addedLeaf := Box{}
+	// TODO: More here, christ the use of ternary operators makes this verbose
 	return nil
 }
 
