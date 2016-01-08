@@ -4,8 +4,7 @@ package lang
 type AFunction struct {
 	AFn
 
-	// TODO ?
-	// __methodImplCache MethodImplCache
+	__methodImplCache MethodImplCache
 }
 
 func (a *AFunction) Meta() IPersistentMap {

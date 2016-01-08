@@ -21,16 +21,14 @@ type PersistentArrayMap struct {
 }
 
 const (
-	HASHABLE_THRESHOLD = 16
+	HASHTABLE_THRESHOLD = 16
 )
 
 var EMPTY_PERSISTENT_ARRAY_MAP = &PersistentArrayMap{
-	array: make([]interface{}, HASHABLE_THRESHOLD), // NOTE: the length might be wrong.
+	array: make([]interface{}, 0),
 	_meta: nil,
 }
 
-// TODO: Rewrite me!
-// This probably needs a utility function that returns an iterator.
 func CreatePersistentArrayMapFromMap(other map[interface{}]interface{}) IPersistentMap {
 	ret := EMPTY_PERSISTENT_ARRAY_MAP.AsTransient()
 	for o := MapEntrySet(other).Seq(); o != nil; o = o.Next() {
@@ -53,10 +51,8 @@ func (m *PersistentArrayMap) create(init ...interface{}) *PersistentArrayMap {
 	}
 }
 
-// TODO
 func (m *PersistentArrayMap) createHT(init []interface{}) IPersistentMap {
-	// return PersistentHashMap.Create(m.Meta(), init)
-	return nil
+	return CreatePersistentHashMap(init).WithMeta(m.Meta())
 }
 
 func CreatePersistentArrayMapWithCheck(init []interface{}) *PersistentArrayMap {
@@ -127,76 +123,118 @@ func CreateAsIfByAssoc(init []interface{}) *PersistentArrayMap {
 	}
 }
 
-func (p *PersistentArrayMap) Count() int {
-	return len(p.array) / 2
+func (m *PersistentArrayMap) Count() int {
+	return len(m.array) / 2
 }
 
-func (p *PersistentArrayMap) ContainsKey(key interface{}) bool {
-	return p.indexOf(key) >= 0
+func (m *PersistentArrayMap) ContainsKey(key interface{}) bool {
+	return m.indexOf(key) >= 0
 }
 
-func (p *PersistentArrayMap) EntryAt(key interface{}) IMapEntry {
-	i := p.indexOf(key)
+func (m *PersistentArrayMap) EntryAt(key interface{}) IMapEntry {
+	i := m.indexOf(key)
 	if i >= 0 {
-		return CreateMapEntry(p.array[i], p.array[i+1])
+		return CreateMapEntry(m.array[i], m.array[i+1])
 	}
 	return nil
 }
 
-func (p *PersistentArrayMap) AssocEx(key interface{}, val interface{}) IPersistentMap {
-	i := p.indexOf(key)
+func (m *PersistentArrayMap) AssocEx(key interface{}, val interface{}) IPersistentMap {
+	i := m.indexOf(key)
 	var newArray []interface{}
 	if i >= 0 {
 		panic("Key already present.")
 	} else { // didn't have key, grow
-		if len(p.array) > HASHABLE_THRESHOLD {
-			return p.createHT(p.array).AssocEx(key, val)
+		if len(m.array) > HASHTABLE_THRESHOLD {
+			return m.createHT(m.array).AssocEx(key, val)
 		}
-		newArray = make([]interface{}, len(p.array)+2)
-		if len(p.array) > 0 {
-			copy(newArray, p.array)
+		newArray = make([]interface{}, len(m.array)+2)
+		if len(m.array) > 0 {
+			copy(newArray[:len(m.array)], m.array[2:len(m.array)])
 		}
 		newArray[0] = key
 		newArray[1] = val
 	}
-	// TODO: Figure out why the following tries to use the PersistenList constructor
-	// return create(newArray)
-	return nil
+	return m.create(newArray)
 }
 
-// TODO
-func (p *PersistentArrayMap) Assoc(key interface{}, val interface{}) Associative {
-	return nil
+func (m *PersistentArrayMap) Assoc(key interface{}, val interface{}) Associative {
+	i := m.indexOf(key)
+	var newArray []interface{}
+	if i >= 0 { // already have key, same-sized replacement
+		if m.array[i+1] == val { // no change, no op
+			return m
+		}
+		copy(newArray, m.array)
+		newArray[i+1] = val
+	} else { // didn't have key, grow
+		if len(m.array) > HASHTABLE_THRESHOLD {
+			return m.createHT(m.array).Assoc(key, val)
+		}
+		newArray = make([]interface{}, len(m.array)+2)
+		if len(m.array) > 0 {
+			copy(newArray, m.array)
+		}
+		newArray[len(newArray)-2] = key
+		newArray[len(newArray)-1] = val
+	}
+	return m.create(newArray)
 }
 
-// TODO
-func (p *PersistentArrayMap) Without(key interface{}) IPersistentMap {
-	return nil
+func (m *PersistentArrayMap) Without(key interface{}) IPersistentMap {
+	i := m.indexOf(key)
+	if i >= 0 { // have key, will remove
+		newlen := len(m.array) - 2
+		if newlen == 0 {
+			return m.Empty().(IPersistentMap)
+		}
+		newArray := make([]interface{}, newlen)
+		copy(newArray[0:i], m.array[0:i])
+		copy(newArray[i+2:newlen-i], m.array[i+2:newlen-i])
+		return m.create(newArray)
+	}
+	// don't have key, no operation
+	return m
 }
 
-// TODO
-func (p *PersistentArrayMap) Empty() IPersistentCollection {
-	return EMPTY_PERSISTENT_ARRAY_MAP.WithMeta(p.Meta())
+func (m *PersistentArrayMap) Empty() IPersistentCollection {
+	return EMPTY_PERSISTENT_ARRAY_MAP.WithMeta(m.Meta())
 }
 
-// TODO
-func (p *PersistentArrayMap) ValAt(key interface{}, notFound interface{}) interface{} {
-	return nil
+func (m *PersistentArrayMap) ValAt(key interface{}, notFound interface{}) interface{} {
+	i := m.indexOf(key)
+	if i >= 0 {
+		return m.array[i+1]
+	}
+	return notFound
 }
 
 // TODO: Why is this necessary?
-func (p *PersistentArrayMap) Capacity() int {
-	return p.Count()
+func (m *PersistentArrayMap) Capacity() int {
+	return m.Count()
 }
 
-// TODO
-func (p *PersistentArrayMap) indexOfObject(key interface{}) int {
-	return 0
+func (m *PersistentArrayMap) indexOfObject(key interface{}) int {
+	ep := Util.EquivPred(key)
+	for i := 0; i < len(m.array); i += 2 {
+		if ep.Equiv(key, m.array[i]) {
+			return i
+		}
+	}
+	return -1
 }
 
-// TODO
-func (p *PersistentArrayMap) indexOf(key interface{}) int {
-	return 1
+func (m *PersistentArrayMap) indexOf(key interface{}) int {
+	switch k := key.(type) {
+	case Keyword:
+		for i := 0; i < len(m.array); i += 2 {
+			if k == m.array[i] {
+				return i
+			}
+		}
+		return -1
+	}
+	return m.indexOfObject(key)
 }
 
 func equalKey(k1 interface{}, k2 interface{}) bool {
@@ -208,32 +246,37 @@ func equalKey(k1 interface{}, k2 interface{}) bool {
 }
 
 // TODO: As always, not sure about this
-func (p *PersistentArrayMap) Iterator() *Iterator {
+func (m *PersistentArrayMap) Iterator() *Iterator {
 	return nil
 }
 
 // TODO
-func (p *PersistentArrayMap) KeyIterator() *Iterator {
+func (m *PersistentArrayMap) KeyIterator() *Iterator {
 	return nil
 }
 
 // TODO
-func (p *PersistentArrayMap) ValIterator() *Iterator {
+func (m *PersistentArrayMap) ValIterator() *Iterator {
 	return nil
 }
 
-// TODO
-func (p *PersistentArrayMap) Seq() ISeq {
+func (m *PersistentArrayMap) Seq() ISeq {
+	if len(m.array) > 0 {
+		return &PersistentArrayMapSeq{
+			array: m.array,
+			i:     0,
+		}
+	}
 	return nil
 }
 
-func (p *PersistentArrayMap) Meta() IPersistentMap {
-	return p._meta
+func (m *PersistentArrayMap) Meta() IPersistentMap {
+	return m._meta
 }
 
-func (p *PersistentArrayMap) KVReduce(f IFn, init interface{}) interface{} {
-	for i := 0; i < len(p.array); i += 2 {
-		init = f.Invoke(init, p.array[i], p.array[i+1])
+func (m *PersistentArrayMap) KVReduce(f IFn, init interface{}) interface{} {
+	for i := 0; i < len(m.array); i += 2 {
+		init = f.Invoke(init, m.array[i], m.array[i+1])
 		if RT.IsReduced(init) {
 			return init.(IDeref).Deref()
 		}
@@ -241,12 +284,13 @@ func (p *PersistentArrayMap) KVReduce(f IFn, init interface{}) interface{} {
 	return init
 }
 
-func (p *PersistentArrayMap) AsTransient() *TransientArrayMap {
-	newArr := make([]interface{}, len(p.array))
-	copy(newArr, p.array)
+func (m *PersistentArrayMap) AsTransient() *TransientArrayMap {
+	newArr := make([]interface{}, len(m.array))
+	copy(newArr, m.array)
 	return &TransientArrayMap{
+		edit:  true,
 		array: newArr,
-		len:   len(p.array),
+		len:   len(m.array),
 	}
 }
 
@@ -263,29 +307,29 @@ type PersistentArrayMapSeq struct {
 	i     int
 }
 
-func (ps *PersistentArrayMapSeq) First() interface{} {
-	return CreateMapEntry(ps.array[ps.i], ps.array[ps.i+1])
+func (ms *PersistentArrayMapSeq) First() interface{} {
+	return CreateMapEntry(ms.array[ms.i], ms.array[ms.i+1])
 }
 
-func (ps *PersistentArrayMapSeq) Next() ISeq {
-	if (ps.i + 2) < len(ps.array) {
+func (ms *PersistentArrayMapSeq) Next() ISeq {
+	if (ms.i + 2) < len(ms.array) {
 		return &PersistentArrayMapSeq{
-			array: ps.array,
-			i:     ps.i + 2,
+			array: ms.array,
+			i:     ms.i + 2,
 		}
 	}
 	return nil
 }
 
-func (ps *PersistentArrayMapSeq) Count() int {
-	return (len(ps.array) - ps.i) / 2
+func (ms *PersistentArrayMapSeq) Count() int {
+	return (len(ms.array) - ms.i) / 2
 }
 
-func (ps *PersistentArrayMapSeq) WithMeta(meta IPersistentMap) interface{} {
+func (ms *PersistentArrayMapSeq) WithMeta(meta IPersistentMap) interface{} {
 	return &PersistentArrayMapSeq{
 		_meta: meta,
-		array: ps.array,
-		i:     ps.i,
+		array: ms.array,
+		i:     ms.i,
 	}
 }
 
@@ -296,6 +340,9 @@ func (ps *PersistentArrayMapSeq) WithMeta(meta IPersistentMap) interface{} {
 type TransientArrayMap struct {
 	ATransientMap
 
+	// NOTE: in JVM Clojure, we also have `volatile Thread owner`
+	// We've changed that to `edit` here, as with TransientVectors
+	edit  bool
 	len   int
 	array []interface{}
 }
@@ -317,7 +364,7 @@ func (t *TransientArrayMap) doAssoc(key interface{}, val interface{}) ITransient
 		}
 	} else {
 		if t.len >= len(t.array) {
-			// TODO
+			return CreatePersistentHashMap(t.array).AsTransient().Assoc(key, val)
 		}
 
 		t.len++
@@ -330,25 +377,42 @@ func (t *TransientArrayMap) doAssoc(key interface{}, val interface{}) ITransient
 	return t
 }
 
-// TODO
 func (t *TransientArrayMap) doWithout(key interface{}) ITransientMap {
-	return nil
+	i := t.indexOf(key)
+	if i >= 0 { // have key, will remove
+		if t.len >= 2 {
+			t.array[i] = t.array[t.len-2]
+			t.array[i+1] = t.array[t.len-1]
+		}
+		t.len -= 2
+	}
+	return t
 }
 
-// TODO
 func (t *TransientArrayMap) doValAt(key interface{}, notFound interface{}) interface{} {
-	return nil
+	i := t.indexOf(key)
+	if i >= 0 {
+		return t.array[i+1]
+	}
+	return notFound
 }
 
 func (t *TransientArrayMap) doCount() int {
 	return t.len / 2
 }
 
-// TODO
 func (t *TransientArrayMap) doPersistent() IPersistentCollection {
-	return nil
+	t.ensureEditable()
+	t.edit = false
+	a := make([]interface{}, t.len)
+	copy(a[:t.len], t.array[:t.len])
+	return &PersistentArrayMap{
+		array: a,
+	}
 }
 
-// TODO
 func (t *TransientArrayMap) ensureEditable() {
+	if t.edit == false {
+		panic(TransientUsedAfterPersistentCallError)
+	}
 }

@@ -32,3 +32,25 @@ var EMPTY_PERSISTENT_HASH_MAP = &PersistentHashMap{
 }
 
 var NOT_FOUND interface{}
+
+// TODO:
+func CreatePersistentHashMap(init ...[]interface{}) *PersistentHashMap {
+	return nil
+}
+
+// TODO
+func (m *PersistentHashMap) AsTransient() *TransientHashMap {
+	return nil
+}
+
+// TODO
+func (m *PersistentHashMap) WithMeta(meta IPersistentMap) IPersistentMap {
+	return m
+}
+
+// TODO: This.
+type TransientHashMap struct {
+	ATransientMap
+}
+
+// TODO: the rest of this file.

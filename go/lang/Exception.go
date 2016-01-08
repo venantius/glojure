@@ -21,6 +21,7 @@ var NotYetImplementedException = "This function is not yet implemented. This is 
 var IllegalArgumentException = "Illegal argument exception."
 var InvalidTypeException = "Invalid type exception."
 var IndexOutOfBoundsException = "Index out of bounds."
+var TransientUsedAfterPersistentCallError = "Transient used after persistent! call"
 var UnsupportedOperationException = "Unsupported operation."
 var WrongNumberOfArgumentsException = "Wrong number of arguments."
 
