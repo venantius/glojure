@@ -51,7 +51,7 @@ func (t *ATransientMap) doCount() int {
 	panic(AbstractClassMethodException)
 }
 
-func (t *ATransientMap) doPersistent() IPersistentMap {
+func (t *ATransientMap) doPersistent() IPersistentCollection {
 	panic(AbstractClassMethodException)
 }
 func (t *ATransientMap) doValAt(k interface{}, notFound interface{}) interface{} {

@@ -51,8 +51,7 @@ func (p *Primordial) InvokeStatic(args ISeq) interface{} {
 }
 
 func (p *Primordial) WithMeta(meta IPersistentMap) IObj {
-	// TODO: "UnsupportedOperationException()"
-	panic("Unsupported Operation")
+	panic(UnsupportedOperationException)
 }
 
 func (p *Primordial) Meta() IPersistentMap {
@@ -132,9 +131,29 @@ func (l *PersistentList) WithMeta(meta IPersistentMap) *PersistentList {
 	return l
 }
 
-// TODO
-func (l *PersistentList) Reduce(f IFn, start interface{}) interface{} {
-	return nil
+func (l *PersistentList) ReduceWithInit(f IFn, start interface{}) interface{} {
+	ret := f.Invoke(start, l.First())
+	for s := l.Next(); s != nil; s = s.Next() {
+		if RT.IsReduced(ret) {
+			return ret.(IDeref).Deref()
+		}
+		ret = f.Invoke(ret, s.First())
+	}
+	if RT.IsReduced(ret) {
+		return ret.(IDeref).Deref()
+	}
+	return ret
+}
+
+func (l *PersistentList) Reduce(f IFn) interface{} {
+	ret := l.First()
+	for s := l.Next(); s != nil; s = s.Next() {
+		ret = f.Invoke(ret, s.First())
+		if RT.IsReduced(ret) {
+			return ret.(IDeref).Deref()
+		}
+	}
+	return ret
 }
 
 /* Declaration Block: EmptyList */
