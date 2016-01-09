@@ -40,17 +40,17 @@ func (s *Symbol) GetName() string {
 	earlier versions of Clojure
 */
 func CreateSymbol(args ...string) *Symbol {
-	return Intern(args...)
+	return InternSymbol(args...)
 }
 
-func InternNsAndName(ns string, name string) *Symbol {
+func InternSymbolNsAndName(ns string, name string) *Symbol {
 	return &Symbol{
 		ns:   ns,
 		name: name,
 	}
 }
 
-func InternNsname(nsname string) *Symbol {
+func InternSymbolNsname(nsname string) *Symbol {
 	i := strings.Index(nsname, "/")
 	if i == -1 || nsname == "/" {
 		return &Symbol{
@@ -64,11 +64,11 @@ func InternNsname(nsname string) *Symbol {
 	}
 }
 
-func Intern(args ...string) *Symbol {
+func InternSymbol(args ...string) *Symbol {
 	if len(args) == 1 {
-		return InternNsname(args[0])
+		return InternSymbolNsname(args[0])
 	} else if len(args) == 2 {
-		return InternNsAndName(args[0], args[1])
+		return InternSymbolNsAndName(args[0], args[1])
 	}
 	panic(WrongNumberOfArgumentsException)
 }
@@ -128,7 +128,7 @@ func (s *Symbol) CompareTo(obj interface{}) int {
 }
 
 func (s *Symbol) readResolve() interface{} {
-	return Intern(s.ns, s.name)
+	return InternSymbol(s.ns, s.name)
 }
 
 func (s *Symbol) Invoke(obj interface{}, notFound interface{}) interface{} {
