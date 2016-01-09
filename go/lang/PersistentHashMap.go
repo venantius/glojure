@@ -52,9 +52,6 @@ func CreatePersistentHashMapWithCheck(init interface{}) *PersistentHashMap {
 	return nil
 }
 
-func hashPersistentHashMap(k interface{}) int {
-	return Util.HashEq(k)
-}
 
 func (m *PersistentHashMap) ContainsKey(key interface{}) bool {
 	if key == nil {
@@ -76,26 +73,25 @@ func (m *PersistentHashMap) EntryAt(key interface{}) IMapEntry {
 		}
 	}
 	if m.root != nil {
-		return m.root.Find(0, hashPersistentHashMap(key), key, nil)
+		return m.root.Find(0, hashPersistentHashMap(key), key, nil).(IMapEntry)
 	} else {
 		return nil
 	}
 }
 
-// TODO
 func (m *PersistentHashMap) Assoc(key interface{}, val interface{}) Associative {
 	if key == nil {
 		if m.hasNull && val == m.nullValue {
 			return m
 		}
 		var c int
-		if hasNull {
+		if m.hasNull {
 			c = m.count
 		} else {
 			c = m.count + 1
 		}
 		return &PersistentHashMap{
-			meta:      m.Meta(),
+			_meta:     m.Meta(),
 			count:     c,
 			root:      m.root,
 			hasNull:   true,
@@ -103,8 +99,29 @@ func (m *PersistentHashMap) Assoc(key interface{}, val interface{}) Associative 
 		}
 	}
 	addedLeaf := Box{}
-	// TODO: More here, christ the use of ternary operators makes this verbose
-	return nil
+	var newroot INode
+	if m.root == nil {
+		newroot = EMPTY_BITMAP_INDEXED_NODE
+	} else {
+		newroot = m.root
+	}
+	newroot = newroot.Assoc(0, hashPersistentHashMap(key), key, val, addedLeaf)
+	if newroot == m.root {
+		return m
+	}
+	var c int
+	if addedLeaf.val == nil {
+		c = m.count
+	} else {
+		c = m.count + 1
+	}
+	return &PersistentHashMap{
+		_meta:     m.Meta(),
+		count:     c,
+		root:      newroot,
+		hasNull:   m.hasNull,
+		nullValue: m.nullValue,
+	}
 }
 
 // TODO
@@ -159,11 +176,6 @@ func (m *PersistentHashMap) Empty() IPersistentCollection {
 	return EMPTY_PERSISTENT_HASH_MAP.WithMeta(m.Meta())
 }
 
-// TODO
-func Mask(hash int, shift int) int {
-	return 0
-}
-
 func (m *PersistentHashMap) WithMeta(meta IPersistentMap) *PersistentHashMap {
 	return &PersistentHashMap{
 		_meta:     meta,
@@ -174,7 +186,6 @@ func (m *PersistentHashMap) WithMeta(meta IPersistentMap) *PersistentHashMap {
 	}
 }
 
-// TODO
 func (m *PersistentHashMap) AsTransient() *TransientHashMap {
 	return &TransientHashMap{
 		_meta:     m._meta,
@@ -190,7 +201,10 @@ func (m *PersistentHashMap) Meta() IPersistentMap {
 	return m._meta
 }
 
-// TODO: This.
+/*
+	TransientHashMap
+ */
+
 type TransientHashMap struct {
 	ATransientMap
 
@@ -204,7 +218,12 @@ type TransientHashMap struct {
 }
 
 // TODO
-func (t *TransientHashMap) DoAssoc(key interface{}, val interface{}) ITransientMap {
+func (t *TransientHashMap) doAssoc(key interface{}, val interface{}) ITransientMap {
+	return nil
+}
+
+// TODO
+func (t *TransientHashMap) doWithout(key interface{}) ITransientMap {
 	return nil
 }
 
@@ -218,4 +237,446 @@ func (t *TransientHashMap) doPersistent() IPersistentCollection {
 	}
 }
 
-// TODO: the rest of this file.
+func (t *TransientHashMap) doValAt(key interface{}, notFound interface{}) interface{} {
+	if key == nil {
+		if t.hasNull {
+			return t.nullValue
+		} else {
+			return notFound
+		}
+	}
+	if t.root == nil {
+		return notFound
+	}
+	return t.root.Find(0, hashPersistentHashMap(key), key, notFound)
+}
+
+func (t *TransientHashMap) doCount() int {
+	return t.count
+}
+
+func (t *TransientHashMap) ensureEditable() {
+	if t.edit == false {
+		panic(TransientUsedAfterPersistentCallError)
+	}
+}
+
+/*
+	ArrayNode
+ */
+
+// NOTE: Implements INode
+type ArrayNode struct {
+	count int
+	array []INode
+	edit bool
+}
+
+// TODO
+func (n *ArrayNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) Without(shift int, hash int, key interface{}, removedLeaf Box) INode {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) Find (shift int, hash int, key interface{}, notFound interface{}) interface{} {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) NodeSeq() ISeq {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) Iterator() *Iterator {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) KVReduce(f IFn, init interface{}) interface{} {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) Fold(combinef IFn, reducef IFn, fjtask IFn, fjfork IFn, fjjoin IFn) interface{} {
+	return nil
+}
+
+// TODO: FoldTasks
+
+// TODO
+func (n *ArrayNode) ensureEditable(edit bool) *ArrayNode {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) editAndSet(edit bool, i int, node INode) *ArrayNode {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) pack(edit bool, idx int) INode {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) AssocWithEdit(edit bool, shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
+	return nil
+}
+
+// TODO
+func (n *ArrayNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf Box) INode {
+	return nil
+}
+
+
+/*
+	ArrayNodeSeq
+ */
+
+type ArrayNodeSeq struct {
+	ASeq
+
+	_meta IPersistentMap
+	nodes []INode
+	i int
+	s ISeq
+}
+
+func CreateArrayNodeSeq(meta IPersistentMap, nodes []INode, i int, s ISeq) ISeq {
+	if s != nil {
+		return &ArrayNodeSeq{
+			_meta: meta,
+			nodes: nodes,
+			i: i,
+			s: s,
+		}
+	}
+	for j := i; j < len(nodes); j++ {
+		if nodes[j] != nil {
+			ns := nodes[j].NodeSeq()
+			if ns != nil {
+				return &ArrayNodeSeq{
+					_meta: meta,
+					nodes: nodes,
+					i: j+1,
+					s: ns,
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (s *ArrayNodeSeq) WithMeta(meta IPersistentMap) interface{} {
+	return &ArrayNodeSeq{
+		_meta: meta,
+		nodes: s.nodes,
+		i: s.i,
+		s: s.s,
+	}
+}
+
+func (s *ArrayNodeSeq) First() interface{} {
+	return s.First()
+}
+
+func (s *ArrayNodeSeq) Next() ISeq {
+	return CreateArrayNodeSeq(nil, s.nodes, s.i, s.s.Next())
+}
+
+
+/*
+	ArrayNodeIter
+ */
+
+// TODO: This is an Iterator class.
+
+/*
+	BitmapIndexedNode
+*/
+
+// NOTE: Implements INode
+type BitmapIndexedNode struct {
+	bitmap int
+	array  []interface{}
+	edit   bool // TODO: Again, with the thread-locking. Not sure what the deal is here though
+}
+
+var EMPTY_BITMAP_INDEXED_NODE = &BitmapIndexedNode{
+	edit:   false,
+	bitmap: 0,
+	array:  make([]interface{}, 0),
+}
+
+// TODO
+func (n *BitmapIndexedNode) index() int {
+	return 0
+	// return Integer.bitCount(bitmap & (bit - 1))
+}
+
+// TODO
+func (n *BitmapIndexedNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
+	return nil
+}
+
+// TODO
+func (n *BitmapIndexedNode) AssocWithEdit(edit bool, shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
+	return nil
+}
+
+// TODO
+func (n *BitmapIndexedNode) Without(shift int, hash int, key interface{}) INode {
+	return nil
+}
+// TODO
+func (n *BitmapIndexedNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf Box) INode {
+	return nil
+}
+
+
+// TODO
+func (n *BitmapIndexedNode) Find(shift int, hash int, key interface{}, notFound interface{}) interface{} {
+	return nil
+}
+
+// TODO
+func (n *BitmapIndexedNode) NodeSeq() ISeq {
+	return nil
+}
+
+// TODO
+func (n *BitmapIndexedNode) Iterator(f IFn) *Iterator {
+	return nil
+}
+
+// TODO
+func (n *BitmapIndexedNode) KVReduce(f IFn, init interface{}) interface{} {
+	return nil
+}
+
+// TODO
+func (n *BitmapIndexedNode) Fold(combinef IFn, reducef IFn, fjtask IFn, fjfork IFn, fjjoin IFn) interface{} {
+	return nil
+}
+
+// TODO
+// NOTE: This also has another version that takes an AtomicReference to a thread
+// as an argument.
+func (n *BitmapIndexedNode) ensureEditable(edit bool) *BitmapIndexedNode {
+	return nil
+}
+
+// TODO
+// NOTE: overloaded
+func (n *BitmapIndexedNode) editAndSet(edit bool, i int, a interface{}, j int, b interface{}) *BitmapIndexedNode {
+	return nil
+}
+
+// TODO
+func (n *BitmapIndexedNode) editAndRemovePair(edit bool, bit int, i int) *BitmapIndexedNode {
+	return nil
+}
+
+/*
+	NodeIter
+*/
+
+// NOTE: Implements Iterator
+type NodeIter struct {
+	array     []interface{}
+	f         IFn
+	i         int
+	nextEntry interface{}
+	nextIter  Iterator
+}
+
+// TODO
+func (n *NodeIter) advance() bool {
+	return true
+}
+
+// TODO
+func (n *NodeIter) HasNext() bool {
+	return true
+}
+
+// TODO
+func (n *NodeIter) Next() interface{} {
+	return nil
+}
+
+// TODO
+func (n *NodeIter) Remove() {
+	panic(UnsupportedOperationException)
+}
+
+/*
+	NodeSeq
+*/
+
+type NodeSeq struct {
+	ASeq
+
+	_meta IPersistentMap
+	array []interface{}
+	i     int
+	s     ISeq
+}
+
+// TODO
+// NOTE: Overloaded
+func CreateNodeSeq(array []interface{}) ISeq {
+	return nil
+}
+
+// TODO
+func KVReduceNodeSeq(array []interface{}, f IFn, init interface{}) interface{} {
+	return nil
+}
+
+func (s *NodeSeq) WithMeta(meta IPersistentMap) *NodeSeq {
+	return &NodeSeq{
+		_meta: meta,
+		array: s.array,
+		i:     s.i,
+		s:     s.s,
+	}
+}
+
+func (s *NodeSeq) First() interface{} {
+	if s.s != nil {
+		return s.s.First()
+	}
+	return CreateMapEntry(s.array[s.i], s.array[s.i+1])
+}
+
+func (s *NodeSeq) Next() ISeq {
+	if s.s != nil {
+		return &NodeSeq{
+			array: s.array,
+			i:     s.i,
+			s:     s.Next(),
+		}
+	}
+	return &NodeSeq{
+		array: s.array,
+		i:     s.i + 2,
+		s:     nil,
+	}
+}
+
+/*
+	HashCollisionNode
+ */
+
+// NOTE: Implements INode
+type HashCollisionNode struct {
+	hash int
+	count int
+	array []interface{}
+	edit bool
+}
+
+// TODO
+func (n *HashCollisionNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) Without(shift int, hash int, key interface{}) INode {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) Find(shift int, hash int, key interface{}, notFound interface{}) interface{} {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) NodeSeq() ISeq {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) Iterator(f IFn) *Iterator {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) KVReduce(f IFn, init interface{}) interface{} {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) Fold(combinef IFn, reducef IFn, fjtask IFn, fjfork IFn, fjjoin IFn) interface{} {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) FindIndex(key interface{}) int {
+	return 0
+}
+
+// TODO
+func (n *HashCollisionNode) ensureEditableNode(edit bool) *HashCollisionNode{
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) ensureEditableWithArgs(edit bool, count int, array []interface{}) *HashCollisionNode {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) editAndSet(edit bool, i int, a interface{}, j int, b interface{}) *HashCollisionNode {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) AssocWithEdit(edit bool, shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
+	return nil
+}
+
+// TODO
+func (n *HashCollisionNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf Box) INode {
+	return nil
+}
+
+/*
+	Assorted static functions
+ */
+
+// NOTE: Not sure what to do about this
+func Mask(hash uint, shift uint) uint {
+	return (hash >> shift) & 31
+}
+
+func hashPersistentHashMap(k interface{}) int {
+	return Util.HashEq(k)
+}
+
+// TODO
+// NOTE: This is an overloaded method
+func cloneAndSet(array []interface{}, i int, a interface{}, j int, b interface{}) []interface{} {
+	return nil
+}
+
+// TODO
+func removePair(array []interface{}, i int) []interface{} {
+	return nil
+}
+
+// TODO
+func createNote(edit bool, shift int, key1 interface{}, val1 interface{}, key2hash int, key2 interface{}, val2 interface{}) INode {
+	return nil
+}
+// TODO
+func bitpos(hash uint, shift uint) int {
+	return 1 << Mask(hash, shift)
+}
