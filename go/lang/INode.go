@@ -1,14 +1,14 @@
 package lang
 
 type INode interface {
-	// Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode
-	// Without(shift int, hash int, key interface{}) INode
+	Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode
+	Without(shift int, hash int, key interface{}) INode
 
 	// Also returns interface{}
-	Find(shift int, hash int, key interface{}, notFound interface{}) IMapEntry
+	Find(shift int, hash int, key interface{}, notFound interface{}) interface{}
 	NodeSeq() ISeq
 
-	Assoc(
+	AssocWithEdit(
 		// bool for edit instead of AtomicReference, as with other transients
 		edit bool,
 		shift int,
@@ -18,7 +18,7 @@ type INode interface {
 		addedLeaf Box,
 	) INode
 
-	Without(
+	WithoutWithEdit(
 		edit bool,
 		shift int,
 		hash int,
@@ -29,5 +29,5 @@ type INode interface {
 	KVReduce(f IFn, init interface{}) interface{}
 	Fold(combinef IFn, reducef IFn, fjtask IFn, fjfork IFn, fjjoin IFn) interface{}
 
-	Iterator(f IFn) Iterator // I still do'nt know about this
+	Iterator(f IFn) *Iterator // I still do'nt know about this
 }
