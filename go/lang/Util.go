@@ -108,6 +108,13 @@ func (_ *util) HashCombine(k1 interface{}, k2 interface{}) int {
 	return 0
 }
 
+func (_ *util) SneakyThrow(t interface{}) {
+	if t == nil {
+		panic("Null pointer exception") // TODO: lol
+	}
+	panic(t)
+}
+
 /*
 	NOTE: Everything after here isn't in the Java version, but I needed it
 	and...utils namespace!
