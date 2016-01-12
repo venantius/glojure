@@ -1,9 +1,13 @@
 package lang
 
-// NOTE: Implements IRef
+/*
+	ARef
+
+	Implements: IRef
+*/
+
 type ARef struct {
-	// TODO: Inherit AReference fields
-	*AReference
+	AReference
 
 	_meta     IPersistentMap
 	validator IFn

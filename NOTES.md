@@ -1,3 +1,16 @@
+2016-01-11
+----------
+* The INode interface in JVM Clojure has an overloaded Assoc method that takes
+some additional arguments when dealing with transient nodes. At the moment I've
+named these `AssocWithEdit`, but something more like `TransientAssoc` might make
+more sense.
+* I've started to experiment with working on a LispReader.go file. There's a
+tremendous amount of work to be done there so I'm taking things one step at a
+time. I've got a ways to go with familiarizing myself with Go's IO paradigm.
+* I haven't figured out yet how exception handling is going to be implemented
+here. The Exception / error paradigm in Go is extremly different from that
+of Java.
+
 2016-01-06
 ----------
 * I've been embedding structs incorrectly. Embedding with pointers is acceptable for some use cases, but not the ones I wanted (where the "concrete class" passes along its full struct to the "abstract class" pointer receiver). I've started to refactor this a bit but it's possible I've missed something - TL;DR, any struct embedding should not be by pointer.

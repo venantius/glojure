@@ -1,13 +1,32 @@
 package lang
 
-// NOTE: Implements ITransientMap
+/*
+	ATransientMap
+
+	Implements: ITransientMap
+*/
+
 type ATransientMap struct {
 	AFn
 }
 
-// TODO
 func (t *ATransientMap) Conj(o interface{}) ITransientCollection {
-	panic(NotYetImplementedException)
+	t.ensureEditable()
+	switch obj := o.(type) {
+	case MapEntry:
+		return t.Assoc(obj.GetKey(), obj.GetValue())
+	case IPersistentVector:
+		if obj.Count() != 2 {
+			panic("Vector arg to map conj must be a pair")
+		}
+		return t.Assoc(obj.Nth(0, nil), obj.Nth(1, nil))
+	}
+	ret := t
+	for es := RT.Seq(o); es != nil; es = es.Next() {
+		var e MapEntry = es.First().(MapEntry)
+		ret = ret.Assoc(e.GetKey(), e.GetValue()).(*ATransientMap)
+	}
+	return ret
 }
 
 func (t *ATransientMap) Invoke(arg1 interface{}, notFound interface{}) interface{} {

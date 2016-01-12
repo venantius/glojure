@@ -1,6 +1,11 @@
 package lang
 
-// NOTE: Implements IReference
+/*
+	AReference
+
+	Implements: IReference
+*/
+
 type AReference struct {
 	_meta IPersistentMap
 }

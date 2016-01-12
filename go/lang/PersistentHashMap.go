@@ -13,7 +13,12 @@ package lang
 	~ @venantius
 */
 
-// NOTE: Implements IEditableCollection, IObj, IMapIterable, IKVReduce
+/*
+	PersistentHashMap
+
+	Implements: IEditableCollection, IObj, IMapIterable, IKVReduce
+*/
+
 type PersistentHashMap struct {
 	APersistentMap
 
@@ -51,7 +56,6 @@ func CreatePersistentHashMap(init ...[]interface{}) *PersistentHashMap {
 func CreatePersistentHashMapWithCheck(init interface{}) *PersistentHashMap {
 	return nil
 }
-
 
 func (m *PersistentHashMap) ContainsKey(key interface{}) bool {
 	if key == nil {
@@ -124,19 +128,56 @@ func (m *PersistentHashMap) Assoc(key interface{}, val interface{}) Associative 
 	}
 }
 
-// TODO
 func (m *PersistentHashMap) ValAt(key interface{}, notFound interface{}) interface{} {
-	return nil
+	if key == nil {
+		if m.hasNull {
+			return m.hasNull
+		} else {
+			return notFound
+		}
+	}
+	if m.root != nil {
+		return m.root.Find(0, hashPersistentHashMap(key), key, notFound)
+	} else {
+		return notFound
+	}
 }
 
-// TODO
 func (m *PersistentHashMap) AssocEx(key interface{}, val interface{}) IPersistentMap {
-	return nil
+	if m.ContainsKey(key) {
+		panic("Key already present")
+	}
+	return m.Assoc(key, val).(*PersistentHashMap)
 }
 
-// TODO
 func (m *PersistentHashMap) Without(key interface{}) IPersistentMap {
-	return nil
+	if key == nil {
+		if m.hasNull {
+			return &PersistentHashMap{
+				_meta:     m.Meta(),
+				count:     m.count - 1,
+				root:      m.root,
+				hasNull:   false,
+				nullValue: nil,
+			}
+		} else {
+			return m
+		}
+	}
+	if m.root == nil {
+		return m
+	}
+	var newroot INode = m.root.Without(0, hashPersistentHashMap(key), key)
+	if newroot == m.root {
+		return m
+	}
+	return &PersistentHashMap{
+		_meta:     m.Meta(),
+		count:     m.count - 1,
+		root:      newroot,
+		hasNull:   m.hasNull,
+		nullValue: m.nullValue,
+	}
 }
 
 // TODO: EMPTY_ITER is abstract iterator class here.
@@ -148,9 +189,22 @@ func (m *PersistentHashMap) Iterator(f IFn) *Iterator {
 
 // TODO: Also, KeyIterator() and ValIterator() func
 
-// TODO
 func (m *PersistentHashMap) KVReduce(f IFn, init interface{}) interface{} {
-	return nil
+	if m.hasNull {
+		init = f.Invoke(init, nil, m.nullValue)
+	}
+	if RT.IsReduced(init) {
+		return init.(IDeref).Deref()
+	}
+	if m.root != nil {
+		init = m.root.KVReduce(f, init)
+		if RT.IsReduced(init) {
+			return init.(IDeref).Deref()
+		} else {
+			return init
+		}
+	}
+	return init
 }
 
 // TODO
@@ -203,7 +257,7 @@ func (m *PersistentHashMap) Meta() IPersistentMap {
 
 /*
 	TransientHashMap
- */
+*/
 
 type TransientHashMap struct {
 	ATransientMap
@@ -219,12 +273,56 @@ type TransientHashMap struct {
 
 // TODO
 func (t *TransientHashMap) doAssoc(key interface{}, val interface{}) ITransientMap {
-	return nil
+	if key == nil {
+		if t.nullValue != val {
+			t.nullValue = val
+		}
+		if !t.hasNull {
+			t.count++
+			t.hasNull = true
+		}
+		return t
+	}
+	t.leafFlag.val = nil
+	var n INode
+	if t.root == nil {
+		n = EMPTY_BITMAP_INDEXED_NODE
+	} else {
+		n = t.root
+	}
+	n.AssocWithEdit(t.edit, 0, hashPersistentHashMap(key), key, val, t.leafFlag)
+	if n != t.root {
+		t.root = n
+	}
+	if t.leafFlag.val != nil {
+		t.count++
+	}
+	return t
 }
 
 // TODO
 func (t *TransientHashMap) doWithout(key interface{}) ITransientMap {
-	return nil
+	if key == nil {
+		if !t.hasNull {
+			return t
+		}
+		t.hasNull = false
+		t.nullValue = nil
+		t.count--
+		return t
+	}
+	if t.root == nil {
+		return t
+	}
+	t.leafFlag.val = nil
+	var n INode = t.root.WithoutWithEdit(t.edit, 0, hashPersistentHashMap(key), key, t.leafFlag)
+	if n != t.root {
+		t.root = n
+	}
+	if t.leafFlag.val != nil {
+		t.count--
+	}
+	return t
 }
 
 func (t *TransientHashMap) doPersistent() IPersistentCollection {
@@ -263,27 +361,57 @@ func (t *TransientHashMap) ensureEditable() {
 
 /*
 	ArrayNode
- */
 
-// NOTE: Implements INode
+	Implements: INode
+*/
+
 type ArrayNode struct {
 	count int
 	array []INode
-	edit bool
+	edit  bool
 }
 
 // TODO
 func (n *ArrayNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
+	idx := Mask(hash, shift)
+	node := n.array[idx]
+	if node == nil {
+		var arr []INode
+		arr = cloneAndSet(
+			n.array,
+			idx,
+			EMPTY_BITMAP_INDEXED_NODE.Assoc(
+				shift+5,
+				hash,
+				key,
+				val,
+				addedLeaf,
+			),
+		)
+		return &ArrayNode{
+			edit:  false,
+			count: n.count + 1,
+			array: arr,
+		}
+	}
+	var in INode = node.Assoc(shift+5, hash, key, val, addedLeaf)
+	if in == node {
+		return n
+	}
+	return &ArrayNode{
+		edit:  false,
+		count: n.count,
+		array: cloneAndSet(n.array, idx, in),
+	}
+}
+
+// TODO
+func (n *ArrayNode) Without(shift int, hash int, key interface{}) INode {
 	return nil
 }
 
 // TODO
-func (n *ArrayNode) Without(shift int, hash int, key interface{}, removedLeaf Box) INode {
-	return nil
-}
-
-// TODO
-func (n *ArrayNode) Find (shift int, hash int, key interface{}, notFound interface{}) interface{} {
+func (n *ArrayNode) Find(shift int, hash int, key interface{}, notFound interface{}) interface{} {
 	return nil
 }
 
@@ -293,7 +421,7 @@ func (n *ArrayNode) NodeSeq() ISeq {
 }
 
 // TODO
-func (n *ArrayNode) Iterator() *Iterator {
+func (n *ArrayNode) Iterator(f IFn) *Iterator {
 	return nil
 }
 
@@ -334,18 +462,17 @@ func (n *ArrayNode) WithoutWithEdit(edit bool, shift int, hash int, key interfac
 	return nil
 }
 
-
 /*
 	ArrayNodeSeq
- */
+*/
 
 type ArrayNodeSeq struct {
 	ASeq
 
 	_meta IPersistentMap
 	nodes []INode
-	i int
-	s ISeq
+	i     int
+	s     ISeq
 }
 
 func CreateArrayNodeSeq(meta IPersistentMap, nodes []INode, i int, s ISeq) ISeq {
@@ -353,8 +480,8 @@ func CreateArrayNodeSeq(meta IPersistentMap, nodes []INode, i int, s ISeq) ISeq 
 		return &ArrayNodeSeq{
 			_meta: meta,
 			nodes: nodes,
-			i: i,
-			s: s,
+			i:     i,
+			s:     s,
 		}
 	}
 	for j := i; j < len(nodes); j++ {
@@ -364,8 +491,8 @@ func CreateArrayNodeSeq(meta IPersistentMap, nodes []INode, i int, s ISeq) ISeq 
 				return &ArrayNodeSeq{
 					_meta: meta,
 					nodes: nodes,
-					i: j+1,
-					s: ns,
+					i:     j + 1,
+					s:     ns,
 				}
 			}
 		}
@@ -377,8 +504,8 @@ func (s *ArrayNodeSeq) WithMeta(meta IPersistentMap) interface{} {
 	return &ArrayNodeSeq{
 		_meta: meta,
 		nodes: s.nodes,
-		i: s.i,
-		s: s.s,
+		i:     s.i,
+		s:     s.s,
 	}
 }
 
@@ -390,10 +517,9 @@ func (s *ArrayNodeSeq) Next() ISeq {
 	return CreateArrayNodeSeq(nil, s.nodes, s.i, s.s.Next())
 }
 
-
 /*
 	ArrayNodeIter
- */
+*/
 
 // TODO: This is an Iterator class.
 
@@ -434,11 +560,11 @@ func (n *BitmapIndexedNode) AssocWithEdit(edit bool, shift int, hash int, key in
 func (n *BitmapIndexedNode) Without(shift int, hash int, key interface{}) INode {
 	return nil
 }
+
 // TODO
 func (n *BitmapIndexedNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf Box) INode {
 	return nil
 }
-
 
 // TODO
 func (n *BitmapIndexedNode) Find(shift int, hash int, key interface{}, notFound interface{}) interface{} {
@@ -573,14 +699,14 @@ func (s *NodeSeq) Next() ISeq {
 
 /*
 	HashCollisionNode
- */
+*/
 
 // NOTE: Implements INode
 type HashCollisionNode struct {
-	hash int
+	hash  int
 	count int
 	array []interface{}
-	edit bool
+	edit  bool
 }
 
 // TODO
@@ -624,7 +750,7 @@ func (n *HashCollisionNode) FindIndex(key interface{}) int {
 }
 
 // TODO
-func (n *HashCollisionNode) ensureEditableNode(edit bool) *HashCollisionNode{
+func (n *HashCollisionNode) ensureEditableNode(edit bool) *HashCollisionNode {
 	return nil
 }
 
@@ -650,11 +776,11 @@ func (n *HashCollisionNode) WithoutWithEdit(edit bool, shift int, hash int, key 
 
 /*
 	Assorted static functions
- */
+*/
 
-// NOTE: Not sure what to do about this
-func Mask(hash uint, shift uint) uint {
-	return (hash >> shift) & 31
+// NOTE: I think this is right but I'm not totally sure.
+func Mask(hash int, shift int) uint {
+	return (uint(hash) >> uint(shift)) & 31
 }
 
 func hashPersistentHashMap(k interface{}) int {
@@ -663,20 +789,27 @@ func hashPersistentHashMap(k interface{}) int {
 
 // TODO
 // NOTE: This is an overloaded method
-func cloneAndSet(array []interface{}, i int, a interface{}, j int, b interface{}) []interface{} {
+func cloneAndSet(array []interface{}, i int, a interface{}) []interface{} {
 	return nil
 }
 
-// TODO
+// cloneAndSetPair is just an overloaded version of cloneAndSet
+func cloneAndSetPair(array []interface{}, i int, a interface{}, j int, b interface{}) []interface{} {
+	return nil
+}
+
 func removePair(array []interface{}, i int) []interface{} {
-	return nil
+	newArray := make([]interface{}, len(array)-2)
+	copy(newArray[:2*i], array[:2*i])
+	copy(newArray[2*(i+1):len(newArray)-2*i], array[2*i:len(newArray)-2*i])
+	return newArray
 }
 
 // TODO
-func createNote(edit bool, shift int, key1 interface{}, val1 interface{}, key2hash int, key2 interface{}, val2 interface{}) INode {
+func createNode(edit bool, shift int, key1 interface{}, val1 interface{}, key2hash int, key2 interface{}, val2 interface{}) INode {
 	return nil
 }
-// TODO
-func bitpos(hash uint, shift uint) int {
+
+func bitpos(hash int, shift int) int {
 	return 1 << Mask(hash, shift)
 }
