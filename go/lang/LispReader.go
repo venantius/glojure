@@ -1,6 +1,7 @@
 package lang
 import (
 	"bufio"
+	"bytes"
 	"io"
 )
 
@@ -34,41 +35,59 @@ var dispatchMacros []IFn = make([]IFn, 256)
 
 // TODO: A large block of code here
 
+type LispReader struct{
+	r *bufio.Reader
+}
+
+func (lr *LispReader) Read() rune {
+	ch, _, err := lr.r.ReadRune()
+	if err != nil {
+		Util.SneakyThrow(err)
+	}
+	return ch
+}
+
+func isWhitespace(ch rune) bool {
+	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
+}
+
+// TODO: ReaderException, RegexReader
+
 type StringReader struct {
 	AFn
 }
 
 func (s *StringReader) Invoke(reader interface{}, doublequote interface{}, opts interface{}, pendingForms interface{}) interface{} {
-	// sb := StringBuilder{} // TODO: Need my own stringbuilder type thing
-	r := bufio.NewScanner(reader.(io.Reader)) // TODO: I'm cheating with this right now.
+	var sb bytes.Buffer
+	r := &LispReader{r: bufio.NewReader(reader.(io.Reader))} // TODO: is casting reader to io.Reader legit?
 
-	for ch := LispReader.Read1(r); ch != "\""; ch = LispReader.Read1(r) {
+	for ch := r.Read(); ch != '\\'; ch = r.Read() {
 		if ch == "-1" {
 			panic("EOF while reading string")
 		}
-		if ch == "\\" {
-			ch = LispReader.Read1(r)
+		if ch == '\\' {
+			ch = r.Read()
 			if ch == "-1" {
 				panic("EOF while reading string")
 
 			}
 			switch ch {
-			case "t":
-				ch = "\t"
-			case "r":
-				ch = "\r"
-			case "n":
-				ch = "\n"
-			case "\\":
+			case 't':
+				ch = '\t'
+			case 'r':
+				ch = '\r'
+			case 'n':
+				ch = '\n'
+			case '\\':
 				break
-			case "\"": // TODO: verify that this actually is the correct way of handling things
+			case '"':
 				break
-			case "b":
-				ch = "\b"
-			case "f":
-				ch = "\f"
-			case "u":
-				ch = LispReader.Read1(r)
+			case 'b':
+				ch = '\b'
+			case 'f':
+				ch = '\f'
+			case 'u':
+				ch = r.Read()
 				// TODO
 				/*
 				if Character.digit(ch, 16) == -1 {
@@ -89,31 +108,28 @@ func (s *StringReader) Invoke(reader interface{}, doublequote interface{}, opts 
 				*/
 			}
 		}
+		sb.WriteRune(ch)
 	}
-	// TODO: the rest of this. I got stressed.
-	// return sb.String()
-	return nil
+	return sb.String()
 
 }
+
+type CommentReader struct {
+	AFn
+}
+
+func (cr *CommentReader) Invoke(reader interface{}, semicolon interface{}, opts interface{}, pendingForms interface{}) interface{} {
+	r := &LispReader{r: bufio.NewReader(reader.(io.Reader))}
+	var ch int
+	for ch := r.Read(); ch != '\n' && ch != '\r' && ch != "-1"; ch = r.Read() {
+		// Advance the reader through comments
+	}
+	return r
+}
+
+// TODO: Many more readers.
+
 
 /*
 	Static methods
  */
-
-type lr struct {}
-var LispReader = lr{}
-
-func (lr *lr) Read1(s *bufio.Scanner) string {
-	if s.Scan() {
-		if err := s.Err(); err != nil {
-			Util.SneakyThrow(s.Err())
-		}
-		return s.Text()
-	}
-	return "-1" // We've reached the end of the scanner.
-}
-
-// TODO
-func (lr *lr) ReadUnicodeChar(s *bufio.Scanner, initch int, base int, length int, exact bool) int {
-	return 0
-}
