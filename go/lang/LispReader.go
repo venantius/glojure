@@ -1,8 +1,10 @@
 package lang
+
 import (
 	"bufio"
 	"bytes"
 	"io"
+	"regexp"
 )
 
 var QUOTE *Symbol = InternSymbol("quote")
@@ -22,16 +24,52 @@ var DEREF *Symbol = InternSymbol("clojure.core", "deref")
 var READ_COND *Symbol = InternSymbol("clojure.core", "read-cond")
 var READ_COND_SPLICING *Symbol = InternSymbol("clojure.core", "read-cond-splicing")
 
-var unknown = "unknown"
-var UNKNOWN *Keyword = InternKeywordNsAndName(nil, &unknown) // TODO: Might want to change this to not take pointers later.
+var UNKNOWN *Keyword = InternKeywordByNsName("unknown")
 
-var macros []IFn = make([]IFn, 256)
-var dispatchMacros []IFn = make([]IFn, 256)
+var macros map[rune]IFn = map[rune]IFn{
+	'"': &StringReader{},
+	';': &CommentReader{},
+	'\'': &WrappingReader{sym: QUOTE},
+	'@': &WrappingReader{sym: DEREF},
+	'^': &MetaReader{},
+	'`': &SyntaxQuoteReader{},
+	'~': &UnquoteReader{},
+	'(': &ListReader{},
+	')': &UnmatchedDelimiterReader{},
+	'[': &VectorReader{},
+	']': &UnmatchedDelimiterReader{},
+	'{': &MapReader{},
+	'}': &UnmatchedDelimiterReader{},
+	'\\': &RuneReader{},
+	'%': &ArgReader{},
+	'#': &DispatchReader{},
+}
 
-// TODO: declare symbolPat
-// TODO: declare intPat
-// TODO: declare ratioPat
-// TODO: declare floatPat
+var dispatchMacros map[rune]IFn = map[rune]IFn{
+	'^': &MetaReader{},
+	'\'': &VarReader{},
+	'"': &RegexReader{},
+	'(': &FnReader{},
+	'{': &SetReader{},
+	'=': &EvalReader{},
+	'!': &CommentReader{},
+	'<': &UnreadableReader{},
+	'_': &DiscardReader{},
+	'?': &ConditionalReader{},
+}
+
+var symbolPat *regexp.Regexp = regexp.MustCompile("[:]?([\\D&&[^/]].*/)?(/|[\\D&&[^/]][^/]*)")
+var intPat *regexp.Regexp = regexp.MustCompile("([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?")
+var radioPat *regexp.Regexp = regexp.MustCompile("([-+]?[0-9]+)/([0-9]+)")
+var floatPat *regexp.Regexp = regexp.MustCompile("([-+]?[0-9]+(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")
+
+// TODO: Var GENSYM_ENV
+// TODO: Var ARG_ENV
+
+// TODO: var ctorReader IFn = CtorReader{}
+// TODO: Var READ_COND_ENV
+
+// NOTE: isWhiteSpace => unicode.isSpace(ch)
 
 // TODO: A large block of code here
 
@@ -47,17 +85,36 @@ func (lr *LispReader) Read() rune {
 	return ch
 }
 
-func isWhitespace(ch rune) bool {
-	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
+func (lr *LispReader) Unread() {
+	err := lr.r.UnreadRune()
+	if err != nil {
+		Util.SneakyThrow(err)
+	}
 }
 
-// TODO: ReaderException, RegexReader
+// Reader opts
+var OPT_EOF *Keyword = InternKeywordByNsName("eof")
+
+
+
+// TODO: ReaderException
+
+type RegexReader struct {
+	AFn
+}
+
+// todo
+func (r *RegexReader) Invoke(args ...interface{}) interface{} {
+	reader, doublequote, opts, pendingForms := unpackReaderArgs(args)
+	return nil
+}
 
 type StringReader struct {
 	AFn
 }
 
-func (s *StringReader) Invoke(reader interface{}, doublequote interface{}, opts interface{}, pendingForms interface{}) interface{} {
+func (s *StringReader) Invoke(args ...interface{}) interface{} {
+	reader, doublequote, opts, pendingForms := unpackReaderArgs(args)
 	var sb bytes.Buffer
 	r := &LispReader{r: bufio.NewReader(reader.(io.Reader))} // TODO: is casting reader to io.Reader legit?
 
@@ -118,7 +175,8 @@ type CommentReader struct {
 	AFn
 }
 
-func (cr *CommentReader) Invoke(reader interface{}, semicolon interface{}, opts interface{}, pendingForms interface{}) interface{} {
+func (cr *CommentReader) Invoke(args ...interface{}) interface{} {
+	reader, semicolon, opts, pendingForms := unpackReaderArgs(args)
 	r := &LispReader{r: bufio.NewReader(reader.(io.Reader))}
 	var ch int
 	for ch := r.Read(); ch != '\n' && ch != '\r' && ch != "-1"; ch = r.Read() {
@@ -127,9 +185,191 @@ func (cr *CommentReader) Invoke(reader interface{}, semicolon interface{}, opts 
 	return r
 }
 
+type DiscardReader struct {
+	AFn
+}
+
+// TODO
+func (dr *DiscardReader) Invoke(args ...interface{}) interface{} {
+	reader, underscore, opts, pendingForms := unpackReaderArgs(args)
+	return nil
+}
+
+type WrappingReader struct {
+	AFn
+
+	sym *Symbol
+}
+
+// TODO
+func (wr *WrappingReader) Invoke(args ...interface{}) interface{} {
+	reader, quote, opts, pendingforms := unpackReaderArgs(args)
+	return nil
+}
+
 // TODO: Many more readers.
+
+type VarReader struct {
+	AFn
+}
+
+// TODO
+func (vr *VarReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type DispatchReader struct {
+	AFn
+}
+
+// TODO
+func (dr *DispatchReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type FnReader struct {
+	AFn
+}
+// TODO
+func (fr *FnReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type ArgReader struct {
+	AFn
+}
+// TODO
+func (ar *ArgReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type MetaReader struct {
+	AFn
+}
+
+// TODO
+func (mr *MetaReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type SyntaxQuoteReader struct {
+	AFn
+}
+
+// TODO
+func (sr *SyntaxQuoteReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type UnquoteReader struct {
+	AFn
+}
+
+// TODO
+func (ur *UnquoteReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+/*
+	RuneReader [CharacterReader]
+ */
+
+type RuneReader struct {
+	AFn
+}
+
+// TODO
+func (cr *RuneReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type ListReader struct {
+	AFn
+}
+
+// TODO
+func (lr *ListReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type EvalReader struct {
+	AFn
+}
+
+// TODO
+func (er *EvalReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type VectorReader struct {
+	AFn
+}
+
+// TODO
+func (vr *VectorReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type MapReader struct {
+	AFn
+}
+
+// TODO
+func (mr *MapReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type SetReader struct {
+	AFn
+}
+
+// TODO
+func (sr *SetReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type UnmatchedDelimiterReader struct {
+	AFn
+}
+
+// TODO
+func (udr *UnmatchedDelimiterReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type UnreadableReader struct {
+	AFn
+}
+
+// TODO
+func (ur *UnreadableReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type CtorReader struct {
+	AFn
+}
+
+// TODO
+func (cr *CtorReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
+
+type ConditionalReader struct {
+	AFn
+}
+
+// TODO
+func (cr *ConditionalReader) Invoke(args ...interface{}) interface{} {
+	return nil
+}
 
 
 /*
 	Static methods
  */
+
+func unpackReaderArgs(args []interface{}) (interface{}, interface{}, interface{}, interface{}) {
+	a, b, c, d := args[0], args[1], args[2], args[3]
+	return a, b, c, d
+}

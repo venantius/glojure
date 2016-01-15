@@ -43,14 +43,14 @@ func CreateSymbol(args ...string) *Symbol {
 	return InternSymbol(args...)
 }
 
-func InternSymbolNsAndName(ns string, name string) *Symbol {
+func InternSymbolByNsAndName(ns string, name string) *Symbol {
 	return &Symbol{
 		ns:   ns,
 		name: name,
 	}
 }
 
-func InternSymbolNsname(nsname string) *Symbol {
+func InternSymbolByNsname(nsname string) *Symbol {
 	i := strings.Index(nsname, "/")
 	if i == -1 || nsname == "/" {
 		return &Symbol{
@@ -66,9 +66,9 @@ func InternSymbolNsname(nsname string) *Symbol {
 
 func InternSymbol(args ...string) *Symbol {
 	if len(args) == 1 {
-		return InternSymbolNsname(args[0])
+		return InternSymbolByNsname(args[0])
 	} else if len(args) == 2 {
-		return InternSymbolNsAndName(args[0], args[1])
+		return InternSymbolByNsAndName(args[0], args[1])
 	}
 	panic(WrongNumberOfArgumentsException)
 }

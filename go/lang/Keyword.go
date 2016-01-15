@@ -42,11 +42,11 @@ func InternKeyword(sym *Symbol) *Keyword {
 	return nil
 }
 
-func InternKeywordNsAndName(ns *string, name *string) *Keyword {
-	return InternKeyword(InternSymbolNsAndName(*ns, *name))
+func InternKeywordByNsAndName(ns string, name string) *Keyword {
+	return InternKeyword(InternSymbolByNsAndName(ns, name))
 }
 
-func InternKeywordNsName(nsname string) *Keyword {
+func InternKeywordByNsName(nsname string) *Keyword {
 	return InternKeyword(InternSymbol(nsname))
 }
 
