@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"io"
 	"regexp"
+	"unicode"
 )
 
 var QUOTE *Symbol = InternSymbol("quote")
@@ -27,35 +28,35 @@ var READ_COND_SPLICING *Symbol = InternSymbol("clojure.core", "read-cond-splicin
 var UNKNOWN *Keyword = InternKeywordByNsName("unknown")
 
 var macros map[rune]IFn = map[rune]IFn{
-	'"': &StringReader{},
-	';': &CommentReader{},
+	'"':  &StringReader{},
+	';':  &CommentReader{},
 	'\'': &WrappingReader{sym: QUOTE},
-	'@': &WrappingReader{sym: DEREF},
-	'^': &MetaReader{},
-	'`': &SyntaxQuoteReader{},
-	'~': &UnquoteReader{},
-	'(': &ListReader{},
-	')': &UnmatchedDelimiterReader{},
-	'[': &VectorReader{},
-	']': &UnmatchedDelimiterReader{},
-	'{': &MapReader{},
-	'}': &UnmatchedDelimiterReader{},
+	'@':  &WrappingReader{sym: DEREF},
+	'^':  &MetaReader{},
+	'`':  &SyntaxQuoteReader{},
+	'~':  &UnquoteReader{},
+	'(':  &ListReader{},
+	')':  &UnmatchedDelimiterReader{},
+	'[':  &VectorReader{},
+	']':  &UnmatchedDelimiterReader{},
+	'{':  &MapReader{},
+	'}':  &UnmatchedDelimiterReader{},
 	'\\': &RuneReader{},
-	'%': &ArgReader{},
-	'#': &DispatchReader{},
+	'%':  &ArgReader{},
+	'#':  &DispatchReader{},
 }
 
 var dispatchMacros map[rune]IFn = map[rune]IFn{
-	'^': &MetaReader{},
+	'^':  &MetaReader{},
 	'\'': &VarReader{},
-	'"': &RegexReader{},
-	'(': &FnReader{},
-	'{': &SetReader{},
-	'=': &EvalReader{},
-	'!': &CommentReader{},
-	'<': &UnreadableReader{},
-	'_': &DiscardReader{},
-	'?': &ConditionalReader{},
+	'"':  &RegexReader{},
+	'(':  &FnReader{},
+	'{':  &SetReader{},
+	'=':  &EvalReader{},
+	'!':  &CommentReader{},
+	'<':  &UnreadableReader{},
+	'_':  &DiscardReader{},
+	'?':  &ConditionalReader{},
 }
 
 var symbolPat *regexp.Regexp = regexp.MustCompile("[:]?([\\D&&[^/]].*/)?(/|[\\D&&[^/]][^/]*)")
@@ -73,16 +74,26 @@ var floatPat *regexp.Regexp = regexp.MustCompile("([-+]?[0-9]+(\\.[0-9]*)?([eE][
 
 // TODO: A large block of code here
 
-type LispReader struct{
+/*
+	LispReader
+
+	For simplicity, I have created a class to cover a lot of the static reader methods that exist in
+	the JVM Clojure equivalent file.
+*/
+
+type LispReader struct {
 	r *bufio.Reader
 }
 
-func (lr *LispReader) Read() rune {
+func (lr *LispReader) Read() (rune, error) {
 	ch, _, err := lr.r.ReadRune()
 	if err != nil {
+		if err == io.EOF {
+			return ch, err
+		}
 		Util.SneakyThrow(err)
 	}
-	return ch
+	return ch, nil
 }
 
 func (lr *LispReader) Unread() {
@@ -92,10 +103,24 @@ func (lr *LispReader) Unread() {
 	}
 }
 
+func createLispReader(r io.Reader) *LispReader {
+	return &LispReader{
+		r: bufio.NewReader(r),
+	}
+}
+
+// TODO
+func (lr *LispReader) ReadToken(initch rune) string {
+	return ""
+}
+
+// TODO
+func (lr *LispReader) ReadNumber(initch rune) interface{} {
+	return nil
+}
+
 // Reader opts
 var OPT_EOF *Keyword = InternKeywordByNsName("eof")
-
-
 
 // TODO: ReaderException
 
@@ -103,28 +128,45 @@ type RegexReader struct {
 	AFn
 }
 
-// todo
-func (r *RegexReader) Invoke(args ...interface{}) interface{} {
-	reader, doublequote, opts, pendingForms := unpackReaderArgs(args)
-	return nil
+func (rr *RegexReader) Invoke(args ...interface{}) interface{} {
+	reader, _, _, _ := unpackReaderArgs(args)
+
+	var sb bytes.Buffer
+	r := createLispReader(reader.(io.Reader))
+
+	for ch, err := r.Read(); ch != '"'; ch, err = r.Read() {
+		if err == io.EOF {
+			panic("EOF while reading regex")
+		}
+		sb.WriteRune(ch)
+		if ch == '\\' {
+			ch, err = r.Read()
+			if err == io.EOF {
+				panic("EOF while reading regex")
+			}
+			sb.WriteRune(ch)
+		}
+	}
+	return regexp.MustCompile(sb.String())
 }
 
 type StringReader struct {
 	AFn
 }
 
-func (s *StringReader) Invoke(args ...interface{}) interface{} {
-	reader, doublequote, opts, pendingForms := unpackReaderArgs(args)
-	var sb bytes.Buffer
-	r := &LispReader{r: bufio.NewReader(reader.(io.Reader))} // TODO: is casting reader to io.Reader legit?
+func (sr *StringReader) Invoke(args ...interface{}) interface{} {
+	reader, _, _, _ := unpackReaderArgs(args)
 
-	for ch := r.Read(); ch != '\\'; ch = r.Read() {
-		if ch == "-1" {
+	var sb bytes.Buffer
+	r := createLispReader(reader.(io.Reader))
+
+	for ch, err := r.Read(); ch != '\\'; ch, err = r.Read() {
+		if err == io.EOF {
 			panic("EOF while reading string")
 		}
 		if ch == '\\' {
-			ch = r.Read()
-			if ch == "-1" {
+			ch, err = r.Read()
+			if err == io.EOF {
 				panic("EOF while reading string")
 
 			}
@@ -144,24 +186,30 @@ func (s *StringReader) Invoke(args ...interface{}) interface{} {
 			case 'f':
 				ch = '\f'
 			case 'u':
-				ch = r.Read()
-				// TODO
-				/*
+				ch, err = r.Read()
+				if !unicode.IsDigit(ch) {
+					// TODO
+				}
+
+			/*
 				if Character.digit(ch, 16) == -1 {
 					panic("Invalid unicode escape") // TODO: flesh this out more
 				}
 				ch = LispReader.ReadUnicodeChar(r, ch, 16, 4, true)
-				*/
+			*/
 			default:
 				// TODO
-				/*
-				if(Character.isDigit(ch)) {
-					ch = LispReader.ReadUnicodeChar(r, ch, 8, 3, false);
-					if(ch > 0377) {
-						panic("Octal escape sequence must be in range [0, 377].");
-					} else {}
-					panic("Unsupported escape character") // TODO: Flesh this out more
+				if unicode.IsDigit(ch) {
+					// some stuff
 				}
+				/*
+					if(Character.isDigit(ch)) {
+						ch = LispReader.ReadUnicodeChar(r, ch, 8, 3, false);
+						if(ch > 0377) {
+							panic("Octal escape sequence must be in range [0, 377].");
+						} else {}
+						panic("Unsupported escape character") // TODO: Flesh this out more
+					}
 				*/
 			}
 		}
@@ -176,10 +224,11 @@ type CommentReader struct {
 }
 
 func (cr *CommentReader) Invoke(args ...interface{}) interface{} {
-	reader, semicolon, opts, pendingForms := unpackReaderArgs(args)
-	r := &LispReader{r: bufio.NewReader(reader.(io.Reader))}
-	var ch int
-	for ch := r.Read(); ch != '\n' && ch != '\r' && ch != "-1"; ch = r.Read() {
+	reader, _, _, _:= unpackReaderArgs(args)
+
+	r := createLispReader(reader.(io.Reader))
+
+	for ch, err := r.Read(); ch != '\n' && ch != '\r' && err != io.EOF; ch, err = r.Read() {
 		// Advance the reader through comments
 	}
 	return r
@@ -191,7 +240,7 @@ type DiscardReader struct {
 
 // TODO
 func (dr *DiscardReader) Invoke(args ...interface{}) interface{} {
-	reader, underscore, opts, pendingForms := unpackReaderArgs(args)
+	// reader, underscore, opts, pendingForms := unpackReaderArgs(args)
 	return nil
 }
 
@@ -203,7 +252,7 @@ type WrappingReader struct {
 
 // TODO
 func (wr *WrappingReader) Invoke(args ...interface{}) interface{} {
-	reader, quote, opts, pendingforms := unpackReaderArgs(args)
+	// reader, quote, opts, pendingforms := unpackReaderArgs(args)
 	return nil
 }
 
@@ -230,6 +279,7 @@ func (dr *DispatchReader) Invoke(args ...interface{}) interface{} {
 type FnReader struct {
 	AFn
 }
+
 // TODO
 func (fr *FnReader) Invoke(args ...interface{}) interface{} {
 	return nil
@@ -238,6 +288,7 @@ func (fr *FnReader) Invoke(args ...interface{}) interface{} {
 type ArgReader struct {
 	AFn
 }
+
 // TODO
 func (ar *ArgReader) Invoke(args ...interface{}) interface{} {
 	return nil
@@ -272,7 +323,7 @@ func (ur *UnquoteReader) Invoke(args ...interface{}) interface{} {
 
 /*
 	RuneReader [CharacterReader]
- */
+*/
 
 type RuneReader struct {
 	AFn
@@ -364,12 +415,107 @@ func (cr *ConditionalReader) Invoke(args ...interface{}) interface{} {
 	return nil
 }
 
-
 /*
 	Static methods
- */
+*/
 
 func unpackReaderArgs(args []interface{}) (interface{}, interface{}, interface{}, interface{}) {
 	a, b, c, d := args[0], args[1], args[2], args[3]
 	return a, b, c, d
+}
+
+func read(r io.Reader, eofIsError bool, eofValue interface{}, returnOn rune, returnOnValue interface{}, isRecursive bool, opts interface{}, pendingForms interface{}) interface{} {
+	if READEVAL.Deref() == UNKNOWN {
+		panic("Reading disallowed - *read-eval* bound to :unknown")
+	}
+
+	lr := createLispReader(r)
+
+	// TODO: opts = installPlatformFeature(opts)
+
+	for {
+		/*
+			// TODO: "List" in Go
+			switch pf := pendingForms.(type) {
+			case List:
+				if !pf.IsEmpty() {
+					return pf.Remove(0)
+				}
+			}
+		*/
+
+		ch, err := lr.Read()
+
+		for unicode.IsSpace(ch) {
+			ch, err = lr.Read()
+		}
+
+		if err == io.EOF {
+			if eofIsError {
+				panic("EOF while reading")
+			}
+			return eofValue
+		}
+
+		if returnOn != rune(0) && returnOn == ch {
+			return returnOnValue
+		}
+
+		if unicode.IsDigit(ch) {
+			n := lr.ReadNumber(ch)
+			return n
+		}
+
+		var macroFn IFn = macros[ch]
+		if macroFn != nil {
+			ret := macroFn.Invoke(lr, ch, opts, pendingForms)
+
+			if ret == r {
+				continue
+			}
+			return ret
+		}
+
+		if ch == '+' || ch == '-' {
+			ch2, _ := lr.Read()
+			if unicode.IsDigit(ch2) {
+				lr.Unread()
+				n := lr.ReadNumber(ch)
+				return n
+			}
+			lr.Unread()
+		}
+
+		var token string = lr.ReadToken(ch)
+		return interpretToken(token)
+
+		// "Catch" in JVM Clojure
+		if err != nil {
+			if isRecursive {
+				Util.SneakyThrow(err)
+			}
+			panic(err)
+		}
+	}
+}
+
+func interpretToken(s string) interface{} {
+	if s == "nil" {
+		return nil
+	} else if s == "true" {
+		return true
+	} else if s == "false" {
+		return false
+	}
+	var ret interface{}
+	ret = matchSymbol(s)
+	if ret != nil {
+		return ret
+	}
+	panic("Invalid token: " + s)
+}
+
+// TODO
+func matchSymbol(s string) interface{} {
+	return nil
 }
