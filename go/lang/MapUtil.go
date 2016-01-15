@@ -19,3 +19,16 @@ func MapEntrySet(obj interface{}) IPersistentSet {
 	}
 	panic(InvalidTypeException)
 }
+
+// Retrieve a map's keys.
+func MapKeys(m interface{}) []interface{} {
+	mTyped := m.(map[interface{}]interface{})
+	keys := make([]interface{}, len(mTyped))
+
+	i := 0
+	for k := range mTyped {
+		keys[i] = k
+		i++
+	}
+	return keys
+}

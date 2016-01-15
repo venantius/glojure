@@ -373,11 +373,11 @@ type ArrayNode struct {
 
 // TODO
 func (n *ArrayNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
-	idx := Mask(hash, shift)
+	idx := int(Mask(hash, shift))
 	node := n.array[idx]
 	if node == nil {
 		var arr []INode
-		arr = cloneAndSet(
+		arr = cloneAndSetINodeArray(
 			n.array,
 			idx,
 			EMPTY_BITMAP_INDEXED_NODE.Assoc(
@@ -401,7 +401,7 @@ func (n *ArrayNode) Assoc(shift int, hash int, key interface{}, val interface{},
 	return &ArrayNode{
 		edit:  false,
 		count: n.count,
-		array: cloneAndSet(n.array, idx, in),
+		array: cloneAndSetINodeArray(n.array, idx, in),
 	}
 }
 
@@ -787,15 +787,29 @@ func hashPersistentHashMap(k interface{}) int {
 	return Util.HashEq(k)
 }
 
-// TODO
-// NOTE: This is an overloaded method
+// Another overloaded version of cloneAndSetINodeArray
+func cloneAndSetINodeArray(array []INode, i int, a INode) []INode {
+	var clone []INode
+	copy(clone, array)
+	clone[i] = a
+	return clone
+}
+
+// NOTE: This is an overloaded method.
 func cloneAndSet(array []interface{}, i int, a interface{}) []interface{} {
-	return nil
+	var clone []interface{}
+	copy(clone, array)
+	clone[i] = a
+	return clone
 }
 
 // cloneAndSetPair is just an overloaded version of cloneAndSet
 func cloneAndSetPair(array []interface{}, i int, a interface{}, j int, b interface{}) []interface{} {
-	return nil
+	var clone []interface{}
+	copy(clone, array)
+	clone[i] = a
+	clone[j] = b
+	return clone
 }
 
 func removePair(array []interface{}, i int) []interface{} {
