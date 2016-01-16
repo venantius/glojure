@@ -5,6 +5,8 @@
     where it's not clearly a PersistentList. I think there might be an exception for
     pendingForms in the LispReader, which should maybe be a linked list based on the
     JVM inplementation
+* From what I understand of Java's `volatile` keyword, a fairly simple locking strategy
+should suffice as a Go analog.
 
 2016-01-11
 ----------
