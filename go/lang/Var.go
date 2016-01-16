@@ -58,8 +58,12 @@ func (v *Var) String() string {
 	return b.String()
 }
 
-func (v *Var) SetDynamic(b bool) *Var {
-	v.dyanmic = b
+func (v *Var) SetDynamic(args ...bool) *Var {
+	if len(args) == 0 {
+		v.dyanmic = true
+	} else {
+		v.dyanmic = args[0]
+	}
 	return v
 }
 

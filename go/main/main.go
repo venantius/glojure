@@ -1,8 +1,8 @@
 package main
 
 import (
-	"clojure-go/go/lang"
 	"fmt"
+	"glojure/go/lang"
 	// "murmur3"
 )
 

@@ -138,9 +138,54 @@ func (_ *rt) PrintString(o interface{}) string {
 	return ""
 }
 
+
+
 // TODO
 func (_ *rt) ToArray(coll interface{}) []interface{} {
 	return nil
+}
+
+func (_ *rt) SeqToArray(seq ISeq) []interface{} {
+	len := RT.Length(seq)
+	ret := make([]interface{}, len)
+	for i := 0; seq != nil; seq = seq.Next() {
+		ret[i] = seq.First()
+		i++
+	}
+	return ret
+}
+
+func (_ *rt) SeqToPassedArray(seq ISeq, passed []interface{}) []interface{} {
+	dest := passed
+	length := RT.Count(seq)
+	if length > len(dest) {
+		dest = make([]interface{}, length) // NOTE: This does some reflection in JVM Clojure.
+	}
+	for i := 0; seq != nil; seq = seq.Next() {
+		dest[i] = seq.First()
+		i++
+	}
+	if length < len(passed) {
+		dest[length] = nil
+	}
+	return dest
+}
+
+func (_ *rt) Length (list ISeq) int {
+	i := 0
+	for c := list; c != nil; c = c.Next() {
+		i++
+	}
+	return i
+}
+
+func (_ *rt) Keys(coll interface{}) ISeq {
+	switch c := coll.(type) {
+	case IPersistentMap:
+		return CreateKeySeqFromMap(c)
+	default:
+		return CreateKeySeq(RT.Seq(coll))
+	}
 }
 
 func (_ *rt) Cons(x interface{}, coll interface{}) ISeq {
@@ -192,7 +237,7 @@ func (_ *rt) List(args ...interface{}) ISeq {
 			_count: 1,
 		}
 	} else {
-		newarray := make([]interface{}, len(args)+1)
+		newarray := make([]interface{}, len(args) + 1)
 		copy(newarray, args)
 		return RT.ListStar(newarray...)
 	}

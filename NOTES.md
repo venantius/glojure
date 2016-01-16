@@ -1,3 +1,11 @@
+2016-01-15
+----------
+* I've left off on making a decision about "List" for a long time. Henceforth I
+    am going to use array/slice builtins as a substitute for List in all cases
+    where it's not clearly a PersistentList. I think there might be an exception for
+    pendingForms in the LispReader, which should maybe be a linked list based on the
+    JVM inplementation
+
 2016-01-11
 ----------
 * The INode interface in JVM Clojure has an overloaded Assoc method that takes
@@ -26,7 +34,7 @@ of Java.
 ----------
 * I've decided to return pointer types for any structs I'm working with. It would appear that specifying a return value of an interface expects a pointer type anyways, so this is actually a move in the direction of consistency.
 
-* Embeded fields in Go are...not great when compared to Java. They're fine for accessing, but if I want to set them I have to be specific about where exactly the original field was set any time I do a new object construction. It's possible that's a more memory-efficient way of doing things than adding a new field outright, but the code is pretty ugly so I'm going to just encode a new field for now. This is primarily coming up with regard to inheritance of a `_meta` field from `Obj`
+* Embedded fields in Go are...not great when compared to Java. They're fine for accessing, but if I want to set them I have to be specific about where exactly the original field was set any time I do a new object construction. It's possible that's a more memory-efficient way of doing things than adding a new field outright, but the code is pretty ugly so I'm going to just encode a new field for now. This is primarily coming up with regard to inheritance of a `_meta` field from `Obj`
 
 * The lack of union types in Go presents a significant problem when it comes to interface management. Consider the case of ISeq and IPersistentCollection - two interfaces that specify a different function signature for the same function, `cons`. By itself this isn't necessarily a problem, but it is when we come to the case of the EmptyList class/struct, which must implement both (it inherits the IPersisentCollection implementation from PersistentList). I believe the best choice for the moment is to refactor both interfaces to have independent functions (e.g. ConsISeq and ConsIPersistentCollection) and target those directly. In the future I expect a general `Cons` will be required with type switching at runtime but this will have to do for now.
 
