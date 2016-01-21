@@ -6,7 +6,7 @@ import (
 
 // NOTE: Implements IObj, Comparable, Named, Serializable, IHashEq
 type Symbol struct {
-	*AFn
+	AFn
 
 	ns      string
 	name    string
@@ -16,8 +16,8 @@ type Symbol struct {
 }
 
 func (s *Symbol) String() string {
-	if &s._str == nil {
-		if &s.ns != nil {
+	if s._str == "" {
+		if s.ns != "" {
 			s._str = s.ns + "/" + s.name
 		} else {
 			s._str = s.name

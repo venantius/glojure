@@ -20,11 +20,14 @@ func (t *ATransientSet) Count() int {
 }
 
 func (t *ATransientSet) Conj(val interface{}) ITransientCollection {
+	// TODO: Fix this
+	/*
 	m := t.impl.Assoc(val, val).(ITransientMap)
 	if m != t.impl {
 		t.impl = m
 	}
-	return t
+	return t*/
+	return nil
 }
 
 func (t *ATransientSet) Contains(key interface{}) bool {

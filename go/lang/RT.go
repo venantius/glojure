@@ -100,31 +100,7 @@ func (_ *rt) SubVec(v IPersistentVector, start int, end int) IPersistentVector {
 	return &SubVector{} // TODO
 }
 
-func (_ *rt) getFrom(coll interface{}, key interface{}, notFound interface{}) interface{} {
-	if coll == nil {
-		return nil
-	}
-	// TODO: This implementation is incomplete
-	return nil
-}
 
-func (_ *rt) Assoc(coll interface{}, key interface{}, val interface{}) Associative {
-	if coll == nil {
-		array := []interface{}{key, val}
-		array[0] = key
-		array[1] = val
-		return &PersistentArrayMap{array: array}
-	}
-	return coll.(Associative).Assoc(key, val)
-}
-
-func (_ *rt) Get(coll interface{}, key interface{}, notFound interface{}) interface{} {
-	switch coll.(type) {
-	case ILookup:
-		return coll.(ILookup).ValAt(key, notFound)
-	}
-	return RT.getFrom(coll, key, notFound)
-}
 
 // unordered
 
@@ -211,6 +187,30 @@ func (_ *rt) Cons(x interface{}, coll interface{}) ISeq {
 
 }
 
+func (_ *rt) First(x interface{}) interface{} {
+	switch o := x.(type) {
+	case ISeq:
+		return o.First()
+	}
+	seq := RT.Seq(x)
+	if seq == nil {
+		return nil
+	}
+	return seq.First()
+}
+
+func (_ *rt) Second(x interface{}) interface{} {
+	return RT.First(RT.Next(x))
+}
+
+func (_ *rt) Third(x interface{}) interface{} {
+	return RT.First(RT.Next(RT.Next(x)))
+}
+
+func (_ *rt) Fourth(x interface{}) interface{} {
+	return RT.First(RT.Next(RT.Next(RT.Next(x))))
+}
+
 func (_ *rt) Next(x interface{}) ISeq {
 	switch s := x.(type) {
 	case ISeq:
@@ -222,6 +222,82 @@ func (_ *rt) Next(x interface{}) ISeq {
 	}
 	return seq.Next()
 }
+
+func (_ *rt) More(x interface{}) ISeq {
+	switch s := x.(type) {
+	case ISeq:
+		return s.More()
+	}
+	seq := RT.Seq(x)
+	if seq == nil {
+		return EMPTY_PERSISTENT_LIST
+	}
+	return seq.More()
+}
+
+func (_ *rt) Peek(x interface{}) interface{} {
+	if x == nil {
+		return nil
+	}
+	return x.(IPersistentStack).Peek()
+}
+
+func (_ *rt) Pop(x interface{}) interface{} {
+	if x == nil {
+		return nil
+	}
+	return x.(IPersistentStack).Pop()
+}
+
+func (_ *rt) Get(coll interface{}, key interface{}, notFound interface{}) interface{} {
+	switch coll.(type) {
+	case ILookup:
+		return coll.(ILookup).ValAt(key, notFound)
+	}
+	return RT.getFrom(coll, key, notFound)
+}
+
+func (_ *rt) getFrom(coll interface{}, key interface{}, notFound interface{}) interface{} {
+	if coll == nil {
+		return nil
+	}
+	switch c := coll.(type) {
+	// TODO: Figure out map type checking
+	case IPersistentSet:
+		if c.Contains(key) {
+			return c.Get(key)
+		}
+		return notFound
+	}
+	// TODO: This implementation is incomplete
+	return nil
+}
+
+
+func (_ *rt) Assoc(coll interface{}, key interface{}, val interface{}) Associative {
+	if coll == nil {
+		array := []interface{}{key, val}
+		return &PersistentArrayMap{array: array}
+	}
+	return coll.(Associative).Assoc(key, val)
+}
+
+func (_ *rt) Contains(coll interface{}, key interface{}) interface{} {
+	if coll == nil {
+		return false
+	}
+	// TODO: figure out map type checking
+	switch c := coll.(type) {
+	case Associative:
+		return c.ContainsKey(key)
+	case IPersistentSet:
+		return c.Contains(key)
+	}
+
+	// TODO...more of this. Sigh.
+	return nil
+}
+
 
 /*
 	List (Persistent) support
