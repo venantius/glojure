@@ -47,13 +47,38 @@ func CreatePersistentHashMapFromMap(other map[interface{}]interface{}) IPersiste
 	return ret.Persistent().(*PersistentHashMap)
 }
 
-// TODO:
-func CreatePersistentHashMap(init ...[]interface{}) *PersistentHashMap {
+func CreatePersistentHashMapFromSeq(items ISeq) *PersistentHashMap {
+	ret := EMPTY_PERSISTENT_HASH_MAP.AsTransient()
+	for ; items != nil; items = items.Next().Next() {
+		ret = ret.Assoc(items.First(), RT.Second(items)).(*TransientHashMap)
+	}
 	return nil
 }
 
-// TODO
-func CreatePersistentHashMapWithCheck(init interface{}) *PersistentHashMap {
+func CreatePersistentHashMapFromSeqWithCheck(init ...interface{}) *PersistentHashMap {
+	ret := EMPTY_PERSISTENT_HASH_MAP.AsTransient()
+	for i := 0 ; i < len(init); i += 2 {
+		ret = ret.Assoc(init[i], init[i+1]).(*TransientHashMap)
+	}
+	return nil
+}
+
+func CreatePersistentHashMap(init ...interface{}) *PersistentHashMap {
+	ret := EMPTY_PERSISTENT_HASH_MAP.AsTransient()
+	for i := 0 ; i < len(init); i += 2 {
+		ret = ret.Assoc(init[i], init[i+1]).(*TransientHashMap)
+	}
+	return nil
+}
+
+func CreatePersistentHashMapWithCheck(init ...interface{}) *PersistentHashMap {
+	ret := EMPTY_PERSISTENT_HASH_MAP.AsTransient()
+	for i := 0 ; i < len(init); i += 2 {
+		ret = ret.Assoc(init[i], init[i+1]).(*TransientHashMap)
+		if ret.Count() != i/2 + 1 {
+			panic("Duplicate key: ") //  + init[i]
+		}
+	}
 	return nil
 }
 

@@ -1,3 +1,9 @@
+2016-01-18
+----------
+* I've finally found a simple answer on StackOverflow that explains how I could do
+simple type checking for, e.g. maps, slices, etc. Link here:
+http://stackoverflow.com/questions/25772347/go-lang-generic-map-value
+
 2016-01-15
 ----------
 * I've left off on making a decision about "List" for a long time. Henceforth I
