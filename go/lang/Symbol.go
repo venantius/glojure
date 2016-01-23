@@ -74,7 +74,7 @@ func InternSymbol(args ...string) *Symbol {
 }
 
 func (s *Symbol) Equals(obj interface{}) bool {
-	if s.Equals(obj) {
+	if s == obj {
 		return true
 	}
 	switch obj.(type) {
@@ -85,6 +85,7 @@ func (s *Symbol) Equals(obj interface{}) bool {
 	}
 
 	symbol := obj.(Symbol)
+	// TODO: This should actually be a function in Utils.
 	return s.ns == symbol.ns && s.name == symbol.name
 }
 

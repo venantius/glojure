@@ -71,9 +71,21 @@ func (_ *equivColl) Equiv(k1 interface{}, k2 interface{}) bool {
 
 // Back to Util functions
 
-// TODO
 func (_ *util) EquivPred(k1 interface{}) EquivPred {
-	return nil
+	if k1 == nil {
+		return &equivNull{}
+	}
+	if IsNumeric(k1) {
+		return &equivNumber{}
+	}
+	switch k1.(type) {
+	case string:
+		return &equivEquals{}
+	case *Symbol:
+		return &equivEquals{}
+	}
+	// TODO: case map or generic collection, return equivColl
+	return &equivEquals{}
 }
 
 // TODO
