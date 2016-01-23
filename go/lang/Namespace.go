@@ -12,8 +12,8 @@ import (
 */
 
 // TODO: These may require an "init()" function
-var namespacesLock *sync.RWMutex      // Protect `namespaces` with a lock
-var namespaces map[*Symbol]*Namespace // NOTE: This is a ConcurrentHashMap in Java
+var namespacesLock sync.RWMutex      // Protect `namespaces` with a lock
+var namespaces map[*Symbol]*Namespace = make(map[*Symbol]*Namespace)// NOTE: This is a ConcurrentHashMap in Java
 
 type Namespace struct {
 	AReference
@@ -37,14 +37,51 @@ func (n *Namespace) GetName() *Symbol {
 	return n.name
 }
 
-// TODO
 func (n *Namespace) GetMappings() IPersistentMap {
-	return nil
+	// TODO: AtomicReference, etc.
+	return n.mappings
 }
 
 // TODO
 func (n *Namespace) Intern(sym *Symbol) *Var {
-	return nil
+	if sym.ns != "" {
+		panic("Can't intern namespace-qualified symbol")
+	}
+	m := n.GetMappings()
+	var o interface{}
+	var v *Var
+	for ; o == nil; o = m.ValAt(sym, nil) {
+		if v == nil {
+			v = &Var{
+				ns: n,
+				sym: sym,
+			}
+		}
+		// In essence, re-set the current namespace with the new symbol, atomically.
+		var newMap IPersistentMap = m.Assoc(sym, v).(IPersistentMap)
+		// TODO: n.mappings.compareandset(map, newMap)
+		m = newMap
+		m = n.GetMappings()
+	}
+	switch obj := o.(type) {
+	case *Var:
+		if obj.ns == n {
+			return obj
+		}
+	}
+	if v == nil {
+		v = &Var{
+			ns: n,
+			sym: sym,
+		}
+	}
+
+	n.warnOrFailOnReplace(sym, o, v)
+
+	// TODO: atomic compareAndSet while loop here
+	m = n.GetMappings()
+
+	return v
 }
 
 // TODO
@@ -84,8 +121,10 @@ func (n *Namespace) Refer(sym *Symbol, v *Var) *Var {
 // TODO
 func FindOrCreateNamespace(name *Symbol) *Namespace {
 	namespacesLock.RLock()
+	defer namespacesLock.RUnlock()
+
 	ns := namespaces[name]
-	namespacesLock.RUnlock()
+
 	if ns != nil {
 		return ns
 	}
@@ -96,7 +135,7 @@ func FindOrCreateNamespace(name *Symbol) *Namespace {
 		mappings: DEFAULT_IMPORTS,
 		aliases:  RT.Map(),
 	}
-	ns = safelyPutNewNamespace(name, newns)
+	ns = putNewNamespace(name, newns)
 	if ns == nil {
 		return newns
 	}
@@ -104,18 +143,13 @@ func FindOrCreateNamespace(name *Symbol) *Namespace {
 }
 
 // Safely set a new namespace. If the key already exists, don't overwrite it.
-func safelyPutNewNamespace(k *Symbol, v *Namespace) *Namespace {
-	namespacesLock.RLock()
-	namespacesLock.Lock()
+// The global lock should already be in place when this function is called.
+func putNewNamespace(k *Symbol, v *Namespace) *Namespace {
 	oldv := namespaces[k]
 	if oldv == nil {
 		namespaces[k] = v
-		namespacesLock.RUnlock()
-		namespacesLock.Unlock()
 		return nil
 	}
-	namespacesLock.RUnlock()
-	namespacesLock.Unlock()
 	return oldv
 }
 

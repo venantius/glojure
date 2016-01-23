@@ -46,7 +46,7 @@ func (_ *rt) GetEnvWithDefault(key string, defaultVal string) string {
 // TODO...more here
 var CLOJURE_NS = FindOrCreateNamespace(InternSymbol("clojure.core"))
 var readeval interface{} = RT.ReadTrueFalseUnknown(RT.GetEnvWithDefault("clojure.read.eval", "true"))
-var READEVAL = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval).SetDynamic(true)
+var READEVAL = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval).SetDynamic()
 
 func (_ *rt) EMPTY_ARRAY() []interface{} {
 	return make([]interface{}, 1)

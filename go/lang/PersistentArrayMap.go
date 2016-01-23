@@ -58,8 +58,6 @@ func (m *PersistentArrayMap) createHT(init []interface{}) IPersistentMap {
 func CreatePersistentArrayMapWithCheck(init []interface{}) *PersistentArrayMap {
 	for i := 0; i < len(init); i += 2 {
 		for j := i+2; j < len(init); j += 2 {
-			fmt.Println(i, j)
-			fmt.Println(init)
 			if equalKey(init[i], init[j]) {
 				panic(DuplicateKeyException(init[i].(fmt.Stringer)))
 			}
