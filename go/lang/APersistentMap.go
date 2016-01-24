@@ -7,10 +7,6 @@ type APersistentMap struct {
 	_hasheq int
 }
 
-func (a *APersistentMap) String() string {
-	return RT.PrintString(a)
-}
-
 func (a *APersistentMap) Cons(obj interface{}) IPersistentCollection {
 	switch o := obj.(type) {
 	case IMapEntry: // NOTE: Map.Entry in Java

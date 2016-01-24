@@ -8,25 +8,11 @@ import (
 
 func main() {
 	v := lang.CreateVector(1, 2)
-	fmt.Println(v.String())
-	y := v.Cons(3)
-	fmt.Println(y.String())
-	z := v.AssocN(0, "other")
-	fmt.Println(z.String())
+	// fmt.Println(v.String())
+	// y := v.Cons(3).(*lang.PersistentVector)
+	z := v.AssocN(0, "other").(*lang.PersistentVector)
 	fmt.Println(z)
 
-	fmt.Println("asdf"[3:])
-
 	fmt.Println(lang.HashString("bananas in pajamas"))
-
-	x := 5
-	switch interface{}(x).(type) {
-	case int32:
-		fmt.Println("int32")
-	case int:
-		fmt.Println("int")
-	default:
-		fmt.Println("stuff")
-	}
 
 }

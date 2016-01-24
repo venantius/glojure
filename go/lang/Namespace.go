@@ -3,6 +3,8 @@ package lang
 import (
 	"reflect"
 	"sync"
+	"fmt"
+
 )
 
 /*
@@ -60,9 +62,10 @@ func (n *Namespace) Intern(sym *Symbol) *Var {
 		// In essence, re-set the current namespace with the new symbol, atomically.
 		var newMap IPersistentMap = m.Assoc(sym, v).(IPersistentMap)
 		// TODO: n.mappings.compareandset(map, newMap)
-		m = newMap
+		n.mappings = newMap
 		m = n.GetMappings()
 	}
+
 	switch obj := o.(type) {
 	case *Var:
 		if obj.ns == n {
@@ -120,8 +123,9 @@ func (n *Namespace) Refer(sym *Symbol, v *Var) *Var {
 
 // TODO
 func FindOrCreateNamespace(name *Symbol) *Namespace {
-	namespacesLock.RLock()
-	defer namespacesLock.RUnlock()
+	// TODO: Uncomment all locks
+	// namespacesLock.RLock()
+	// defer namespacesLock.RUnlock()
 
 	ns := namespaces[name]
 
@@ -159,9 +163,9 @@ func RemoveNamespace(name *Symbol) *Namespace {
 }
 
 func FindNamespace(name *Symbol) *Namespace {
-	namespacesLock.RLock()
+	// namespacesLock.RLock()
 	ns := namespaces[name]
-	namespacesLock.RUnlock()
+	// namespacesLock.RUnlock()
 	return ns
 }
 
