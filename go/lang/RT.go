@@ -50,12 +50,13 @@ func (_ *rt) GetEnvWithDefault(key string, defaultVal string) string {
 
 // TODO...more here
 var CLOJURE_NS = FindOrCreateNamespace(InternSymbol("clojure.core"))
+var OUT *Var = InternVar(CLOJURE_NS, InternSymbol("*out*"), os.Stdout).SetDynamic()
+// TODO: This should actually be a LineNumberingPushbackReader for os.Stdin
+var IN *Var = InternVar(CLOJURE_NS, InternSymbol("*in*"), os.Stdin).SetDynamic()
+var ERR *Var = InternVar(CLOJURE_NS, InternSymbol("*err*"), os.Stderr).SetDynamic()
 var readeval interface{} = RT.ReadTrueFalseUnknown(RT.GetEnvWithDefault("clojure.read.eval", "true"))
+var READEVAL = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval).SetDynamic()
 
-// TODO: Right now for some reason this just causes the entire program to hang.
-// var READEVAL = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval).SetDynamic()
-var herp = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval)
-var READEVAL *Var
 
 func (_ *rt) EMPTY_ARRAY() []interface{} {
 	return make([]interface{}, 1)

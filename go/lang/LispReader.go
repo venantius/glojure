@@ -7,6 +7,9 @@ import (
 	"regexp"
 	"unicode"
 	"container/list"
+	"math/rand"
+	"fmt"
+	"strconv"
 )
 
 /*
@@ -91,8 +94,9 @@ var PLATFORM_FEATURES interface{} = CreatePersistentHashSetFromInterfaceSlice(PL
 var COND_ALLOW *Keyword = InternKeywordByNsName("allow")
 var COND_PRESERVE *Keyword = InternKeywordByNsName("preserve")
 
-var READ_EOF interface{}
-var READ_FINISHED interface{}
+// These are sentinel values.
+var READ_EOF = rand.Int()
+var READ_FINISHED = rand.Int()
 
 // NOTE: isWhiteSpace => unicode.isSpace(ch)
 
@@ -148,7 +152,35 @@ func (lr *LispReader) ReadToken(initch rune) string {
 
 // TODO
 func (lr *LispReader) ReadNumber(initch rune) interface{} {
-	return nil
+	var sb bytes.Buffer
+	sb.WriteRune(initch)
+	for {
+		ch, err := lr.ReadRune()
+		if err != nil || unicode.IsSpace(ch) || lr.IsMacro(ch) {
+			lr.UnreadRune()
+			break
+		}
+		sb.WriteRune(initch)
+	}
+	s := sb.String()
+	n, interr := strconv.ParseInt(s, 10, 64)
+	f, flerr := strconv.ParseFloat(s, 64)
+
+	if interr != nil && flerr != nil {
+		panic(fmt.Sprintf("Invalid number: %v", s))
+	}
+	if interr != nil {
+		return n
+	} else {
+		return f
+	}
+}
+
+// TODO....there's other functions in here
+
+func (lr *LispReader) IsMacro(ch rune) bool {
+	// NOTE: This behaves a little differently in the Java version, due to note using a map for `macros`.
+	return macros[ch] != nil
 }
 
 func (lr *LispReader) ReadDelimitedList(delim rune, isRecursive bool, opts interface{}, pendingForms interface{}) []interface{} {
@@ -158,7 +190,7 @@ func (lr *LispReader) ReadDelimitedList(delim rune, isRecursive bool, opts inter
 
 	a := make([]interface{}, 0)
 	for {
-		form := lr.Read(false, READ_EOF, &delim, READ_FINISHED, isRecursive, opts, pendingForms)
+		form := lr.Read(false, READ_EOF, delim, READ_FINISHED, isRecursive, opts, pendingForms)
 
 		if form == READ_EOF {
 			if firstline < 0 {
@@ -174,7 +206,7 @@ func (lr *LispReader) ReadDelimitedList(delim rune, isRecursive bool, opts inter
 	}
 }
 
-func (lr *LispReader) Read(eofIsError bool, eofValue interface{}, returnOn *rune, returnOnValue interface{}, isRecursive bool, opts interface{}, pendingForms interface{}) interface{} {
+func (lr *LispReader) Read(eofIsError bool, eofValue interface{}, returnOn rune, returnOnValue interface{}, isRecursive bool, opts interface{}, pendingForms interface{}) interface{} {
 	if READEVAL.Deref() == UNKNOWN {
 		panic("Reading disallowed - *read-eval* bound to :unknown")
 	}
@@ -202,7 +234,7 @@ func (lr *LispReader) Read(eofIsError bool, eofValue interface{}, returnOn *rune
 			return eofValue
 		}
 
-		if *returnOn != rune(0) && *returnOn == ch {
+		if returnOn != rune(0) && returnOn == ch {
 			return returnOnValue
 		}
 
@@ -213,6 +245,7 @@ func (lr *LispReader) Read(eofIsError bool, eofValue interface{}, returnOn *rune
 
 		var macroFn IFn = macros[ch]
 		if macroFn != nil {
+
 			ret := macroFn.Invoke(lr, ch, opts, pendingForms)
 
 			// NOTE: This doesn't make sense to me.
@@ -367,7 +400,7 @@ type DiscardReader struct {
 func (dr *DiscardReader) Invoke(args ...interface{}) interface{} {
 	reader, _, opts, pendingForms := unpackReaderArgs(args)
 	r := reader.(*LispReader)
-	r.Read(true, nil, nil, nil, true, opts, r.ensurePending(pendingForms))
+	r.Read(true, nil, rune(0), nil, true, opts, r.ensurePending(pendingForms))
 	return r
 }
 
@@ -390,7 +423,7 @@ type VarReader struct {
 func (vr *VarReader) Invoke(args ...interface{}) interface{} {
 	reader, _, opts, pendingForms := unpackReaderArgs(args)
 	r := reader.(*LispReader)
-	o := r.Read(true, nil, nil, nil, true, opts, r.ensurePending(pendingForms))
+	o := r.Read(true, nil, rune(0), nil, true, opts, r.ensurePending(pendingForms))
 	return RT.List(THE_VAR, o)
 }
 

@@ -1,14 +1,30 @@
 package lang
 
 import (
-	"fmt"
 	"strings"
 	"testing"
+
+	"io"
 )
 
-func TestRead(t *testing.T) {
+func TestVectorReaderWithIntegerVector(t *testing.T) {
+	r := strings.NewReader("[1 2 5]")
+	y := createLispReader(r).Read(false, io.EOF, rune(0), nil, false, nil, nil)
+	varArgsVector := CreateVector(1, 2, 5)
+	if !(varArgsVector.Equals(y)) {
+		t.Error("Failed to initialize vectors that should have been equal.")
+	}
+
+
+}
+
+func TestVectorReaderWithStringVector(t *testing.T) {
 	r := strings.NewReader("[1]")
-	fmt.Println(r.ReadRune())
+	y := createLispReader(r).Read(false, io.EOF, rune(0), nil, false, nil, nil)
+	varArgsVector := CreateVector("a", "b", "c")
+	if !(varArgsVector.Equals(y)) {
+		t.Error("Failed to initialize vectors that should have been equal.")
+	}
 
 
 }
