@@ -1,5 +1,6 @@
 package lang
 
+
 // TODO: Extends AFn
 // NOTE: Implements IPersistentVector, Iterable, List, RandomAccess, COmparable, Serializable, IHashEq
 type APersistentVector struct {
@@ -49,8 +50,21 @@ func (a *APersistentVector) Pop() IPersistentStack {
 	panic(UnsupportedOperationException)
 }
 
-// TODO
+
 func doEquals(v IPersistentVector, i interface{}) bool {
+	switch it := i.(type) {
+	case IPersistentVector:
+		if it.Count() != v.Count() {
+			return false
+		}
+		for i := 0; i < v.Count(); i++ {
+			if !Util.Equals(v.Nth(i, nil), it.Nth(i, nil)) {
+				return false
+			}
+		}
+		return true
+	}
+	// TODO: More type switches here
 	return true
 }
 

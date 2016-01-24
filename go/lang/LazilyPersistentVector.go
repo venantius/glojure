@@ -1,8 +1,11 @@
 package lang
 
+import "fmt"
+
 type LazilyPersistentVector struct{}
 
-func CreateOwningLazilyPersistentVector(items ...interface{}) IPersistentVector {
+func CreateOwningLazilyPersistentVector(items... interface{}) IPersistentVector {
+	fmt.Println("items", items)
 	if len(items) <= NODE_SIZE {
 		return &PersistentVector{
 			cnt:   len(items),
@@ -20,6 +23,8 @@ func CreateLazilyPersistentVector(obj interface{}) IPersistentVector {
 		return CreateVectorFromIReduceInit(o)
 	case ISeq:
 		return CreateVectorFromISeq(o)
+	case []interface{}:
+		return CreateVectorFromInterfaceSlice(o)
 	default:
 		return CreateOwningLazilyPersistentVector(RT.ToArray(obj))
 	}

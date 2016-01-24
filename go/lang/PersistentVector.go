@@ -350,7 +350,6 @@ func (v *PersistentVector) Cons(val interface{}) IPersistentCollection {
 	newroot := &Node{edit: false}
 	tailnode := &Node{v.root.edit, v.tail}
 	newshift := v.shift
-	fmt.Println(tailnode)
 	// NOTE: Again, not comfortable with bit shifting here.
 	if (v.cnt >> VECTOR_SHIFT) > (1 << v.shift) {
 		newroot = &Node{edit: v.root.edit} // defaults?

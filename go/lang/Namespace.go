@@ -44,7 +44,6 @@ func (n *Namespace) GetMappings() IPersistentMap {
 	return n.mappings
 }
 
-// TODO
 func (n *Namespace) Intern(sym *Symbol) *Var {
 	if sym.ns != "" {
 		panic("Can't intern namespace-qualified symbol")
@@ -87,8 +86,24 @@ func (n *Namespace) Intern(sym *Symbol) *Var {
 	return v
 }
 
-// TODO
 func (n *Namespace) warnOrFailOnReplace(sym *Symbol, o interface{}, v interface{}) {
+	switch obj := o.(type) {
+	case Var:
+		ns := obj.ns
+		if ns == n {
+			return
+		}
+		switch vobj := v.(type) {
+		case Var:
+			if vobj.ns == CLOJURE_NS {
+				return
+			}
+		}
+		if ns != CLOJURE_NS {
+			panic(fmt.Sprintf("WARNING: %v already refers to: %v in namespace: %v", sym, o, n.name))
+		}
+	}
+	// TODO...the rest of this
 }
 
 // TODO

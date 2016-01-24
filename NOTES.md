@@ -1,3 +1,15 @@
+2016-01-23
+----------
+* The existing work on abstract classes is going to have to go. It doesn't fit with
+Go's inheritance model at all, which has turned out to be a real pain in the neck.
+Specifically: there's no way to have an abstract method for a struct that gets
+embedded in another struct such that the calling the method as the embedding struct
+retains the relevant type information of the embedding struct. My guess is that the
+ultimate takeaway here will involve moving the current abstract classes to interfaces
+and refactoring so that the individual classes each get the concrete implementations.
+These concrete implementations might be linked to private static methods that they can
+all share that are tied to the new "abstract interfaces" in question.
+
 2016-01-18
 ----------
 * I've finally found a simple answer on StackOverflow that explains how I could do
