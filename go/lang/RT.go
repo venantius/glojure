@@ -3,6 +3,10 @@ package lang
 import (
 	"go/types"
 	"os"
+	"bytes"
+	"bufio"
+
+	"fmt"
 )
 
 // In case it wasn't obvious (it wasn't to me), RT stands for RunTime
@@ -18,6 +22,7 @@ type rt struct{}
 var T bool = true
 var F bool = false
 var LOADER_SUFFIX string = "__init"
+
 
 var DEFAULT_IMPORTS IPersistentMap = RT.Map(
 	InternSymbol("Boolean"), types.Bool,
@@ -46,7 +51,11 @@ func (_ *rt) GetEnvWithDefault(key string, defaultVal string) string {
 // TODO...more here
 var CLOJURE_NS = FindOrCreateNamespace(InternSymbol("clojure.core"))
 var readeval interface{} = RT.ReadTrueFalseUnknown(RT.GetEnvWithDefault("clojure.read.eval", "true"))
-var READEVAL = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval).SetDynamic()
+
+// TODO: Right now for some reason this just causes the entire program to hang.
+// var READEVAL = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval).SetDynamic()
+var herp = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval)
+var READEVAL *Var
 
 func (_ *rt) EMPTY_ARRAY() []interface{} {
 	return make([]interface{}, 1)
@@ -75,16 +84,23 @@ func (_ *rt) IsReduced(r interface{}) bool {
 // TODO....so much
 
 func (_ *rt) Seq(coll interface{}) ISeq {
+	// TODO: This definitely doesn't work at the moment
 	switch c := coll.(type) {
 	case *ASeq:
 		return c
-	case *LazySeq:
+	case LazySeq:
 		return c.Seq()
 	}
+
 	return RT.seqFrom(coll)
 }
 
 func (_ *rt) seqFrom(coll interface{}) ISeq {
+	switch c := coll.(type) {
+	case Seqable:
+		return c.Seq()
+		// TODO: the rest of this
+	}
 	// TODO
 	return nil
 }
@@ -109,9 +125,47 @@ func (_ *rt) Count(o interface{}) int {
 	return 0
 }
 
-// TODO
 func (_ *rt) PrintString(o interface{}) string {
-	return ""
+	var b bytes.Buffer
+	w := bufio.NewWriter(&b)
+	RT.Print(o, w)
+	w.Flush()
+	return b.String()
+
+}
+
+// TODO
+func (_ *rt) ReadString(s string, opts interface{}) interface{} {
+	return nil
+}
+
+// Figure out what the relevant string representation of the object is and write it into
+// the writer (expecting a buffer)
+func (_ *rt) Print(x interface{}, w *bufio.Writer) {
+
+	// TODO a lot of stuff
+
+	switch obj := x.(type) {
+	// MORE STUFF
+	case IPersistentMap:
+		w.WriteRune('{')
+
+		for s := RT.Seq(obj); s != nil; s = s.Next() {
+			e := s.First().(IMapEntry)
+			RT.Print(e.Key(), w)
+			w.WriteRune(' ')
+			RT.Print(e.Val(), w)
+			if s.Next() != nil {
+				w.WriteString(", ")
+			}
+		}
+		w.WriteRune('}')
+	case fmt.Stringer:
+		w.WriteString(obj.String())
+	default:
+		w.WriteString(fmt.Sprintf("%v", obj))
+	}
+
 }
 
 

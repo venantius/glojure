@@ -3,6 +3,7 @@ package lang
 import (
 	"bytes"
 	"sync"
+
 )
 
 /*
@@ -80,6 +81,7 @@ func InternVarWithOptlReplacement(ns *Namespace, sym *Symbol, root interface{}, 
 	if !dvout.HasRoot() || replaceRoot {
 		dvout.BindRoot(root)
 	}
+
 	return dvout
 }
 
@@ -115,7 +117,7 @@ func CreateVarFromNothing() *Var {
 
 func CreateVarFromRoot(root interface{}) *Var {
 	return &Var{
-	// TODO
+		// TODO
 	}
 }
 

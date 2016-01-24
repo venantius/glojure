@@ -14,7 +14,7 @@ import (
 
 // NOTE: Implements IObj, IEditableCollection, IMapIterable, IKVReduce
 type PersistentArrayMap struct {
-	APersistentMap
+	*APersistentMap
 
 	_meta IPersistentMap
 	array []interface{}
@@ -27,6 +27,10 @@ const (
 var EMPTY_PERSISTENT_ARRAY_MAP = &PersistentArrayMap{
 	array: make([]interface{}, 0),
 	_meta: nil,
+}
+
+func (a *PersistentArrayMap) String() string {
+	return RT.PrintString(a)
 }
 
 func CreatePersistentArrayMapFromMap(other map[interface{}]interface{}) IPersistentMap {
@@ -45,7 +49,7 @@ func (m *PersistentArrayMap) WithMeta(meta IPersistentMap) *PersistentArrayMap {
 	}
 }
 
-func (m *PersistentArrayMap) create(init ...interface{}) *PersistentArrayMap {
+func (m *PersistentArrayMap) create(init []interface{}) *PersistentArrayMap {
 	return &PersistentArrayMap{
 		array: init,
 	}
