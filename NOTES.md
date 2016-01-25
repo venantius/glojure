@@ -1,3 +1,11 @@
+2016-01-24
+----------
+* I've made an active decision not to attempt to implement functions in JVM clojure that are
+ tied to the java.util.Collection interface. These have been a major thorn in my side to stub
+ out so far and as there is no analog in Go I don't see much need in pretending. Note that there
+ are some that are likely to prove valuable later (i.e. compareTo, for instance, as an explicit
+ non-direct-equality comparison), but I'm okay on punting on that decision for now. 
+
 2016-01-23
 ----------
 * The existing work on abstract classes is going to have to go. It doesn't fit with

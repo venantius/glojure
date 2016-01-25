@@ -93,8 +93,19 @@ func (_ *util) PCEquiv(k1 interface{}, k2 interface{}) bool {
 	return false
 }
 
-// TODO
+// NOTE: I'm not yet super happy about this, but it'll have to do for now.
 func (_ *util) Equals(k1 interface{}, k2 interface{}) bool {
+	if k1 == k2 {
+		return true
+	}
+	switch k := k1.(type) {
+	case IEquals:
+		return k1 != nil && k.Equals(k2)
+	}
+	switch k := k2.(type) {
+	case IEquals:
+		return k2 != nil && k.Equals(k1)
+	}
 	return false
 }
 
