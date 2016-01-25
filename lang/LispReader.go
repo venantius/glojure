@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 /*
@@ -67,9 +68,9 @@ var dispatchMacros map[rune]IFn = map[rune]IFn{
 	'?':  &ConditionalReader{},
 }
 
-var symbolPat *regexp.Regexp = regexp.MustCompile("[:]?([\\D&&[^/]].*/)?(/|[\\D&&[^/]][^/]*)")
-var intPat *regexp.Regexp = regexp.MustCompile("([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?")
-var radioPat *regexp.Regexp = regexp.MustCompile("([-+]?[0-9]+)/([0-9]+)")
+var symbolPat *regexp.Regexp = regexp.MustCompile(`:?([^/\d].*/)?(/|[^\d/][^/]*)`)
+var intPat *regexp.Regexp = regexp.MustCompile(`([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?`)
+var radioPat *regexp.Regexp = regexp.MustCompile(`([-+]?[0-9]+)/([0-9]+)`)
 var floatPat *regexp.Regexp = regexp.MustCompile("([-+]?[0-9]+(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")
 
 var GENSYM_ENV *Var = CreateVarFromNothing().SetDynamic()
@@ -146,9 +147,18 @@ func (lr *LispReader) ensurePending(pendingForms interface{}) interface{} {
 	}
 }
 
-// TODO
 func (lr *LispReader) ReadToken(initch rune) string {
-	return ""
+	var b bytes.Buffer
+	b.WriteRune(initch)
+
+	for {
+		ch, err := lr.ReadRune()
+		if err != nil || unicode.IsSpace(ch) || lr.IsTerminatingMacro(ch) {
+			lr.UnreadRune()
+			return b.String()
+		}
+		b.WriteRune(ch)
+	}
 }
 
 // TODO
@@ -182,6 +192,10 @@ func (lr *LispReader) ReadNumber(initch rune) interface{} {
 func (lr *LispReader) IsMacro(ch rune) bool {
 	// NOTE: This behaves a little differently in the Java version, due to note using a map for `macros`.
 	return macros[ch] != nil
+}
+
+func (lr *LispReader) IsTerminatingMacro(ch rune) bool {
+	return ch != '#' && ch != '\'' && ch != '%' && lr.IsMacro(ch)
 }
 
 func (lr *LispReader) ReadDelimitedList(delim rune, isRecursive bool, opts interface{}, pendingForms interface{}) []interface{} {
@@ -317,7 +331,8 @@ func (sr *StringReader) Invoke(args ...interface{}) interface{} {
 	var sb bytes.Buffer
 	r := reader.(*LispReader)
 
-	for ch, err := r.ReadRune(); ch != '\\'; ch, err = r.ReadRune() {
+	for ch, err := r.ReadRune(); ch != '"'; ch, err = r.ReadRune() {
+
 		if err == io.EOF {
 			panic("EOF while reading string")
 		}
@@ -615,6 +630,7 @@ func interpretToken(s string) interface{} {
 	}
 	var ret interface{}
 	ret = matchSymbol(s)
+
 	if ret != nil {
 		return ret
 	}
@@ -623,5 +639,24 @@ func interpretToken(s string) interface{} {
 
 // TODO
 func matchSymbol(s string) interface{} {
+	r := symbolPat.FindString(s)
+	if r != "" {
+		matches := symbolPat.FindStringSubmatch(s) // maybe I should just do this from the beginning
+		var ns string = matches[1]
+		var name string = matches[2]
+		if (ns != "" && strings.HasSuffix(ns, ":/") || strings.HasSuffix(name, ":") || strings.Index(s[1:], "::") != -1) {
+			return nil
+		}
+		if strings.HasPrefix(s, "::") {
+			// TODO: do stuff
+		}
+		var isKeyword bool = strings.Index(s, ":") == 0
+		if isKeyword {
+			sym := InternSymbol(s[1:])
+			return InternKeyword(sym)
+		} else {
+			return InternSymbol(s[0:])
+		}
+	}
 	return nil
 }
