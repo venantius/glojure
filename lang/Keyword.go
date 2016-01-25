@@ -14,7 +14,7 @@ package lang
 type Keyword struct {
 	sym    *Symbol
 	hasheq int
-	_str   *string
+	_str   string
 }
 
 var rq int                                   // Should be ReferenceQueue
@@ -33,10 +33,15 @@ func InternKeyword(sym *Symbol) *Keyword {
 			sym:    sym,
 			hasheq: sym.HashEq() + 0x9e3779b9,
 		}
+
 		// TODO
 	}
 	if existingRef == nil {
-		return k
+
+		if k != nil {
+			return k
+		}
+		return nil
 	}
 	//TODO...more
 	return nil
@@ -67,10 +72,10 @@ func (k *Keyword) HashEq() int {
 }
 
 func (k *Keyword) String() string {
-	if k._str == nil {
-		*k._str = ":" + k.sym.String()
+	if k._str == "" {
+		k._str = ":" + k.sym.String()
 	}
-	return *k._str
+	return k._str
 }
 
 // TODO: A bit longer actually
