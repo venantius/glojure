@@ -20,22 +20,12 @@ type APersistentVector interface {
 	IHashEq
 	IFn
 
-	Add(i int, o interface{})
-	AddAll(i int, c Collection) bool
-	Clear()
-	CompareTo(o interface{}) int
-	Contains(o interface{}) bool
-	ContainsAll(o interface{}) bool
 	Equals(o interface{}) bool
-	Get(i int) interface{}
 	HashCode() int
 	IndexOf(o interface{}) int
-	IsEmpty() bool
 	// Iterator() Iterator // TODO: don't want to deal with this
 	LastIndexOf(o interface{}) int
 	// ListIterator(i int) List // TODO: don't want to deal with this right now.
-	// Remove(o interface{}) bool // TODO: punting on this as well
-	Set(i int, o interface{}) interface{}
 	String() string
 }
 
@@ -46,7 +36,7 @@ func APersistentVector_String(a APersistentVector) string {
 
 func APersistentVector_Seq(a APersistentVector) ISeq {
 	if a.Count() > 0 {
-		return &PersistentVectorSeq{
+		return &APersistentVectorSeq{
 			v: a,
 			i: 0,
 		}
@@ -62,23 +52,6 @@ func APersistentVector_RSeq(a APersistentVector) ISeq {
 		}
 	}
 	return nil
-}
-
-func APersistentVector_IsEmpty(a APersistentVector) bool {
-	return a.Count() == 0
-}
-
-func APersistentVector_Contains(a APersistentVector, o interface{}) bool {
-	for s := a.Seq(); s != nil; s = s.Next() {
-		if Util.Equiv(s.First(), o) {
-			return true
-		}
-	}
-	return false
-}
-
-func APersistentVector_Length(a APersistentVector) int {
-	return a.Count()
 }
 
 // TODO
@@ -132,8 +105,8 @@ func APersistentVector_HashEq(a APersistentVector) int {
 	return 0
 }
 
-func APersistentVector_Get(a APersistentVector, index int) interface{} {
-	return a.Nth(index, nil)
+func APersistentVector_Length(a APersistentVector) int {
+	return a.Count()
 }
 
 func APersistentVector_Nth(a APersistentVector, i int, notFound interface{}) interface{} {
@@ -141,11 +114,6 @@ func APersistentVector_Nth(a APersistentVector, i int, notFound interface{}) int
 		return a.Nth(i, nil)
 	}
 	return notFound
-}
-
-func APersistentVector_Remove(a APersistentVector, i int) interface{} {
-	// TODO
-	panic(UnsupportedOperationException)
 }
 
 func APersistentVector_IndexOf(a APersistentVector, o interface{}) int {
@@ -176,22 +144,6 @@ func (a *APersistentVector) SubList(fromIndex int, toIndex int) List {
 }
 */
 
-func APersistentVector_Set(a APersistentVector, i int, o interface{}) interface{} {
-	panic(UnsupportedOperationException)
-}
-
-func APersistentVector_Add(a APersistentVector, i int, o interface{}) interface{} {
-	panic(UnsupportedOperationException)
-}
-
-func APersistentVector_AddAll(a APersistentVector, i int, c Collection) bool {
-	panic(UnsupportedOperationException)
-}
-
-func APersistentVector_Clear(a APersistentVector) {
-	panic(UnsupportedOperationException)
-}
-
 // TODO
 func APersistentVector_Invoke(a APersistentVector, arg1 interface{}) interface{} {
 	return nil
@@ -214,13 +166,13 @@ func APersistentVector_ContainsKey(a APersistentVector, key interface{}) bool {
 	return true
 }
 
-// TODO
-func APersistentVector_ContainsAll(a APersistentVector, c interface{}) bool {
-	return true
-}
-
-// TODO
 func APersistentVector_EntryAt(a APersistentVector, key interface{}) IMapEntry {
+	if IsInt(key) {
+		var i int = key.(int)
+		if i >= 0 && i < a.Count() {
+			return CreateMapEntry(key, a.Nth(i, nil))
+		}
+	}
 	return nil
 }
 
@@ -255,7 +207,7 @@ func APersistentVector_ToArray(a APersistentVector) []interface{} {
 
 // Declaration block: PersistentVectorSeq
 
-type PersistentVectorSeq struct {
+type APersistentVectorSeq struct {
 	*ASeq
 
 	_meta IPersistentMap
@@ -263,13 +215,13 @@ type PersistentVectorSeq struct {
 	i     int
 }
 
-func (s *PersistentVectorSeq) First() interface{} {
+func (s *APersistentVectorSeq) First() interface{} {
 	return s.v.Nth(s.i, nil)
 }
 
-func (s *PersistentVectorSeq) Next() ISeq {
+func (s *APersistentVectorSeq) Next() ISeq {
 	if (s.i + 1) < s.v.Count() {
-		return &PersistentVectorSeq{
+		return &APersistentVectorSeq{
 			v: s.v,
 			i: s.i + 1,
 		}
@@ -277,16 +229,16 @@ func (s *PersistentVectorSeq) Next() ISeq {
 	return nil
 }
 
-func (s *PersistentVectorSeq) Index() int {
+func (s *APersistentVectorSeq) Index() int {
 	return s.i
 }
 
-func (s *PersistentVectorSeq) Count() int {
+func (s *APersistentVectorSeq) Count() int {
 	return s.v.Count() - s.i
 }
 
-func (s *PersistentVectorSeq) WithMeta(meta IPersistentMap) *PersistentVectorSeq {
-	return &PersistentVectorSeq{
+func (s *APersistentVectorSeq) WithMeta(meta IPersistentMap) *APersistentVectorSeq {
+	return &APersistentVectorSeq{
 		_meta: meta,
 		v:     s.v,
 		i:     s.i,
@@ -294,7 +246,7 @@ func (s *PersistentVectorSeq) WithMeta(meta IPersistentMap) *PersistentVectorSeq
 }
 
 // TODO
-func (s *PersistentVectorSeq) Reduce(f IFn, start interface{}) interface{} {
+func (s *APersistentVectorSeq) Reduce(f IFn, start interface{}) interface{} {
 	return nil
 }
 
@@ -433,32 +385,8 @@ func (r *SubVector) Meta() IPersistentMap {
 	SubVector inheritance block: APersistentVector
  */
 
-func (r *SubVector) Add(i int, o interface{}) {
-	APersistentVector_Add(r, i, o)
-}
-
-func (r *SubVector) AddAll(i int, c Collection) bool {
-	return APersistentVector_AddAll(r, i, c)
-}
-
 func (r *SubVector) Assoc(key interface{}, val interface{}) Associative {
 	return APersistentVector_Assoc(r, key, val)
-}
-
-func (r *SubVector) Clear() {
-	APersistentVector_Clear(r)
-}
-
-func (r *SubVector) CompareTo(o interface{}) int {
-	return APersistentVector_CompareTo(r, o) // maybe?
-}
-
-func (r *SubVector) Contains(key interface{}) bool {
-	return APersistentVector_Contains(r, key)
-}
-
-func (r *SubVector) ContainsAll(c interface{}) bool {
-	return APersistentVector_ContainsAll(r, c)
 }
 
 func (r *SubVector) ContainsKey(key interface{}) bool {
@@ -469,17 +397,12 @@ func (r *SubVector) EntryAt(key interface{}) IMapEntry {
 	return APersistentVector_EntryAt(r, key)
 }
 
-
 func (r *SubVector) Equals(i interface{}) bool {
 	return APersistentVector_Equals(r, i)
 }
 
 func (r *SubVector) Equiv(i interface{}) bool {
 	return APersistentVector_Equiv(r, i)
-}
-
-func (r *SubVector) Get(index int) interface{} {
-	return APersistentVector_Get(r, index)
 }
 
 func (r *SubVector) HashCode() int {
@@ -492,10 +415,6 @@ func (r *SubVector) HashEq() int {
 
 func (r *SubVector) IndexOf(o interface{}) int {
 	return APersistentVector_IndexOf(r, o)
-}
-
-func (r *SubVector) IsEmpty() bool {
-	return APersistentVector_IsEmpty(r)
 }
 
 func (r *SubVector) LastIndexOf(i interface{}) int {
@@ -512,10 +431,6 @@ func (r *SubVector) Peek() interface{} {
 
 func (r *SubVector) RSeq() ISeq {
 	return APersistentVector_RSeq(r)
-}
-
-func (r *SubVector) Set(i int, o interface{}) interface {} {
-	return APersistentVector_Set(r, i, o)
 }
 
 func (r *SubVector) Seq() ISeq {
