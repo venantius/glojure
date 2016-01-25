@@ -131,7 +131,8 @@ func (lr *LispReader) UnreadRune() {
 	}
 }
 
-func createLispReader(r io.Reader) *LispReader {
+// TODO: make this private in the future?
+func CreateLispReader(r io.Reader) *LispReader {
 	return &LispReader{
 		r: bufio.NewReader(r),
 	}
@@ -170,9 +171,9 @@ func (lr *LispReader) ReadNumber(initch rune) interface{} {
 		panic(fmt.Sprintf("Invalid number: %v", s))
 	}
 	if interr != nil {
-		return n
-	} else {
 		return f
+	} else {
+		return int(n)
 	}
 }
 
