@@ -58,13 +58,16 @@ var readeval interface{} = RT.ReadTrueFalseUnknown(RT.GetEnvWithDefault("clojure
 var READEVAL = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval).SetDynamic()
 
 
+// TODO...there's more content in between here
+var CURRENT_NS *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*ns"), CLOJURE_NS).SetDynamic()
+
 func (_ *rt) EMPTY_ARRAY() []interface{} {
 	return make([]interface{}, 1)
 }
 
 var RT = rt{} // Mock static methods
 
-func (_ *rt) Map(init ...interface{}) IPersistentMap {
+func (_ *rt) Map(init... interface{}) IPersistentMap {
 	if init == nil {
 		return EMPTY_PERSISTENT_ARRAY_MAP
 	} else if len(init) <= HASHTABLE_THRESHOLD {
@@ -150,7 +153,6 @@ func (_ *rt) Print(x interface{}, w *bufio.Writer) {
 	// MORE STUFF
 	case IPersistentMap:
 		w.WriteRune('{')
-
 		for s := RT.Seq(obj); s != nil; s = s.Next() {
 			e := s.First().(IMapEntry)
 			RT.Print(e.Key(), w)

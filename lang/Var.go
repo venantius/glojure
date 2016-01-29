@@ -106,11 +106,14 @@ func InternVarByNsAndSym(ns *Namespace, sym *Symbol) *Var {
 }
 
 func CreateVarFromNothing() *Var {
+	var v *Var
 	return &Var{
 		ns:          nil,
 		sym:         nil,
 		threadBound: false, // TODOAtomicBoolean
-		root:        &VarUnbound{},
+		root: VarUnbound{
+			v: v,
+		},
 		_meta:       EMPTY_PERSISTENT_HASH_MAP,
 	}
 }
@@ -131,9 +134,9 @@ func (v *Var) Get() interface{} {
 	return nil
 }
 
-// TODO
+// TODO: this is a naive and stupid implementation
 func (v *Var) Deref() interface{} {
-	return nil
+	return v.root
 }
 
 // TODO
@@ -201,8 +204,10 @@ func (v *Var) HasRoot() bool {
 }
 
 // TODO
+// NOTE: Synchronized
+// NOTE: Stupid, naive implementation
 func (v *Var) BindRoot(root interface{}) {
-
+	v.root = root
 }
 
 /*

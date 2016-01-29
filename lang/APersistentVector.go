@@ -1,7 +1,6 @@
 package lang
 import (
 	"fmt"
-	"reflect"
 )
 
 /*
@@ -69,19 +68,16 @@ func APersistentVector_doEquals(v IPersistentVector, i interface{}) bool {
 		if it.Count() != v.Count() {
 			return false
 		}
-		fmt.Println("Here!")
-		fmt.Println(v, i)
 		for i := 0; i < v.Count(); i++ {
 			if !Util.Equals(v.Nth(i, nil), it.Nth(i, nil)) {
-				fmt.Println(v.Nth(i, nil), it.Nth(i, nil))
-				fmt.Println(reflect.TypeOf(v.Nth(i, nil)), reflect.TypeOf(it.Nth(i, nil)))
+				fmt.Println(v.Nth(i, 5), it.Nth(i, 8))
 				return false
 			}
 		}
 		return true
 	}
 	// TODO: More type switches here
-	return true
+	return false
 }
 
 // TODO
