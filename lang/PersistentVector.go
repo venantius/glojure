@@ -7,9 +7,16 @@ import (
 
 var emptyVectorPopError = "Can't pop empty vector."
 
-// NOTE: Implements IObj, IEditableCollection, IReduce, IKVReduce
+/*
+	PersistentVector
+
+	Extends: APersistentVector
+	Implements: IObj, IEditableCollection, IReduce, IKVReduce
+ */
+
 type PersistentVector struct {
-	APersistentVector
+	AFn // For now.
+
 	_hash   int
 	_hasheq int
 
@@ -52,13 +59,15 @@ var EMPTY_PERSISTENT_VECTOR = &PersistentVector{
 }
 
 /*
-	NOTE: This is just a small anonymous class in Java
+	transientVectorConj
+
+	Note: This is just a small anonymous class in Java
 */
+
 type transientVectorConj struct {
 	AFn
 }
 
-// Original method is overloaded.
 func (t *transientVectorConj) Invoke(args ...interface{}) interface{} {
 	coll := args[0]
 	val := args[1]
@@ -175,6 +184,8 @@ func CreateVector(items ...interface{}) *PersistentVector {
 	// TODO: uncomment me once we understand iterables in Go.
 	// case Iterable:
 	// 	ret = CreateVectorFromIterable(items[0].(Iterable))
+	case []interface{}:
+		ret = CreateVectorFromInterfaceSlice(item)
 	default:
 		ret = CreateVectorFromInterfaceSlice(items)
 	}
@@ -433,7 +444,68 @@ func (v *PersistentVector) KVReduce(f IFn, init interface{}) interface{} {
 	return init
 }
 
-// NOTE: implements IChunkedSeq, Counted
+/*
+	Abstract Methods (PersistentVector)
+ */
+
+func (v *PersistentVector) Assoc(key interface{}, val interface{}) Associative {
+	return APersistentVector_Assoc(v, key, val)
+}
+
+func (v *PersistentVector) ContainsKey(key interface{}) bool {
+	return APersistentVector_ContainsKey(v, key)
+}
+
+func (v *PersistentVector) EntryAt(key interface{}) IMapEntry {
+	return APersistentVector_EntryAt(v, key)
+}
+
+func (v *PersistentVector) Equals(i interface{}) bool {
+	return APersistentVector_Equals(v, i)
+}
+
+func (v *PersistentVector) Equiv(i interface{}) bool {
+	return APersistentVector_Equiv(v, i)
+}
+
+func (v *PersistentVector) HashCode() int{
+	return APersistentVector_HashCode(v)
+}
+
+func (v *PersistentVector) HashEq() int{
+	return APersistentVector_HashCode(v)
+}
+
+func (v *PersistentVector) IndexOf(o interface{}) int {
+	return APersistentVector_IndexOf(v, o)
+}
+
+func (v *PersistentVector) LastIndexOf(o interface{}) int {
+	return APersistentVector_LastIndexOf(v, o)
+}
+
+func (v *PersistentVector) Length() int {
+	return APersistentVector_Length(v)
+}
+
+func (v *PersistentVector) Peek() interface{} {
+	return APersistentVector_Peek(v)
+}
+
+func (v *PersistentVector) RSeq() ISeq {
+	return APersistentVector_RSeq(v)
+}
+
+func (v *PersistentVector) ValAt(key interface{}, notFound interface{}) interface{} {
+	return APersistentVector_ValAt(v, key, notFound)
+}
+
+/*
+	ChunkedSeq
+
+	Implements: IChunkedSeq, Counted
+ */
+
 type ChunkedSeq struct {
 	ASeq
 	_hash   int

@@ -11,6 +11,8 @@ func TestAPersistentVectorSatiesfiesInterfaces(t *testing.T) {
 
 	var ipersistentvector IPersistentVector
 
+	var persistentvector PersistentVector
+
 	/*
 		var iterable Iterable
 		var list List
@@ -20,8 +22,11 @@ func TestAPersistentVectorSatiesfiesInterfaces(t *testing.T) {
 		var ihasheq IHashEq
 	*/
 
+	// Check that PersistentVector implements APersistentVector
+	apersistentvector = &persistentvector
+
 	// Check that APersistentVector implements IPersistentVector
-	ipersistentvector = &apersistentvector
+	ipersistentvector = apersistentvector
 
 	if false {
 		fmt.Println(
