@@ -15,7 +15,7 @@ import (
 
 // TODO: These may require an "init()" function
 var namespacesLock sync.RWMutex      // Protect `namespaces` with a lock
-var namespaces map[*Symbol]*Namespace = make(map[*Symbol]*Namespace)// NOTE: This is a ConcurrentHashMap in Java
+var namespaces map[string]*Namespace = make(map[string]*Namespace)// NOTE: This is a ConcurrentHashMap in Java
 
 type Namespace struct {
 	AReference
@@ -56,6 +56,9 @@ func (n *Namespace) Intern(sym *Symbol) *Var {
 			v = &Var{
 				ns: n,
 				sym: sym,
+				root: &VarUnbound{
+					v: v,
+				},
 			}
 		}
 		// In essence, re-set the current namespace with the new symbol, atomically.
@@ -75,6 +78,9 @@ func (n *Namespace) Intern(sym *Symbol) *Var {
 		v = &Var{
 			ns: n,
 			sym: sym,
+			root: &VarUnbound{
+				v: v,
+			},
 		}
 	}
 
@@ -142,13 +148,13 @@ func FindOrCreateNamespace(name *Symbol) *Namespace {
 	// namespacesLock.RLock()
 	// defer namespacesLock.RUnlock()
 
-	ns := namespaces[name]
+	ns := namespaces[name.String()]
 
 	if ns != nil {
 		return ns
 	}
 	newns := &Namespace{
-		_meta: nil,
+		_meta: name.Meta(),
 		name:  name,
 		// both of these are set atomically
 		mappings: DEFAULT_IMPORTS,
@@ -164,9 +170,9 @@ func FindOrCreateNamespace(name *Symbol) *Namespace {
 // Safely set a new namespace. If the key already exists, don't overwrite it.
 // The global lock should already be in place when this function is called.
 func putNewNamespace(k *Symbol, v *Namespace) *Namespace {
-	oldv := namespaces[k]
+	oldv := namespaces[k.String()]
 	if oldv == nil {
-		namespaces[k] = v
+		namespaces[k.String()] = v
 		return nil
 	}
 	return oldv
@@ -179,7 +185,7 @@ func RemoveNamespace(name *Symbol) *Namespace {
 
 func FindNamespace(name *Symbol) *Namespace {
 	// namespacesLock.RLock()
-	ns := namespaces[name]
+	ns := namespaces[name.String()]
 	// namespacesLock.RUnlock()
 	return ns
 }
@@ -194,13 +200,17 @@ func (n *Namespace) FindInternedVar(symbol *Symbol) *Var {
 	return nil
 }
 
-// TODO
+// TODO: deal with the concurrent aspect of this
 func (n *Namespace) GetAliases() IPersistentMap {
-	return nil
+	return n.aliases
 }
 
-// TODO
 func (n *Namespace) LookupAlias(alias *Symbol) *Namespace {
+	m := n.GetAliases().(IPersistentMap)
+	a := m.ValAt(alias, nil)
+	if a != nil {
+		return a.(*Namespace)
+	}
 	return nil
 }
 
