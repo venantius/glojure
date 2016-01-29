@@ -5,16 +5,19 @@ import (
 )
 
 /*
+	PersistentArrayMap
+
 	Simple implementation of persistent map on an array. Note that instances
 	of this class are constant values, i.e. add/remove etc. return new
 	values. Copies entire array on every change, so only appropriate for very
 	small maps. Null keys and values are okay, but you won't be able to
 	distinguish a null value via `ValAt` - use `Contains` or `EntryAt`
+
+	Implements: IObj, IEditableCollection, IMapIterable, IKVReduce
 */
 
-// NOTE: Implements IObj, IEditableCollection, IMapIterable, IKVReduce
 type PersistentArrayMap struct {
-	*APersistentMap
+	AFn
 
 	_meta IPersistentMap
 	array []interface{}
@@ -296,6 +299,22 @@ func (m *PersistentArrayMap) AsTransient() *TransientArrayMap {
 		array: newArr,
 		len:   len(m.array),
 	}
+}
+
+/*
+	Abstract methods (PersistentArrayMap)
+ */
+
+func (m *PersistentArrayMap) Cons(o interface{}) IPersistentCollection{
+	return APersistentMap_Cons(m, o)
+}
+
+func (m *PersistentArrayMap) Equiv(o interface{}) bool{
+	return APersistentMap_Equiv(m, o)
+}
+
+func (m *PersistentArrayMap) HashEq() int{
+	return APersistentMap_HashEq(m)
 }
 
 /*

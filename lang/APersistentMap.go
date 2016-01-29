@@ -1,13 +1,25 @@
 package lang
 
-// NOTE: Implements IPersistentMap, Map, Iterable, Serializable, MapEquivalance, IHashEq
-type APersistentMap struct {
-	AFn
-	_hash   int
-	_hasheq int
+import "fmt"
+
+/*
+	APersistentMap
+
+	Extends: AFn
+
+	Note: In JVM clojure, this is an abstract class. See APersistentVector for more details.
+
+	APersistentMap had the new fields of _hash (int) and _hasheq (int)
+ */
+
+type APersistentMap interface {
+	IPersistentMap
+	MapEquivalence
+	IHashEq
+	IFn
 }
 
-func (a *APersistentMap) Cons(obj interface{}) IPersistentCollection {
+func APersistentMap_Cons(a APersistentMap, obj interface{}) IPersistentCollection {
 	switch o := obj.(type) {
 	case IMapEntry: // NOTE: Map.Entry in Java
 		return a.Assoc(o.Key(), o.Val())
@@ -20,12 +32,12 @@ func (a *APersistentMap) Cons(obj interface{}) IPersistentCollection {
 	ret := a
 	for es := RT.Seq(obj); es != nil; es = es.Next() {
 		e := es.First().(IMapEntry)
-		ret = ret.Assoc(e.Key(), e.Val()).(*APersistentMap)
+		ret = ret.Assoc(e.Key(), e.Val()).(APersistentMap)
 	}
 	return ret
 }
 
-func (a *APersistentMap) Equals(obj interface{}) bool {
+func APersistentMap_Equals(a APersistentMap, obj interface{}) bool {
 	return MapEquals(a, obj)
 }
 
@@ -35,38 +47,43 @@ func MapEquals(m1 IPersistentMap, obj interface{}) bool {
 	if m1 == obj {
 		return true
 	}
-	switch obj.(type) {
+	switch m := obj.(type) {
 	case map[interface{}]interface{}:
-	// TODO: have a map proxy for Map types in Glojure
-	default:
-		return false
-	}
-	m := obj.(map[interface{}]interface{})
-	if len(m) != m1.Count() {
-		return false
-	}
-
-	for s := m1.Seq(); s != nil; s = s.Next() {
-		e := s.First().(IMapEntry)
-		_, found := m[e.Key()]
-
-		if !found || Util.Equals(e.Val(), m[e.Key()]) {
+		if len(m) != m1.Count() {
 			return false
 		}
+		return false
+	case IPersistentMap:
+		for s := m1.Seq(); s != nil; s = s.Next() {
+			fmt.Println("Got to here!")
+			e := s.First().(IMapEntry)
+
+			found := m.ContainsKey(e.Key())
+
+			if !found || !Util.Equals(e.Val(), m.ValAt(e.Key(), nil)) {
+				return false
+			}
+		}
+	// TODO: have a map proxy for Map types in Glojure
 	}
+
 	return true
 }
 
 // TODO
-func (a *APersistentMap) Equiv(o interface{}) bool {
+func APersistentMap_Equiv(a APersistentMap, o interface{}) bool {
 	return true
 }
 
-func (a *APersistentMap) HashCode() int {
+// TODO: Not sure how to figure this out. Maybe cast to an abstract hashable struct?
+func APersistentMap_HashCode(a APersistentMap) int {
+	/*
 	if a._hash == -1 {
 		a._hash = MapHash(a)
 	}
 	return a._hash
+	*/
+	return 0
 }
 
 // TODO
@@ -74,18 +91,22 @@ func MapHash(m IPersistentMap) int {
 	return 0
 }
 
-func (a *APersistentMap) HashEq() int {
+// TODO: See note on APersistentMap_HashCode
+func APersistentMap_HashEq(a APersistentMap) int {
+	/*
 	if a._hasheq == -1 {
 		a._hasheq = HashUnordered(a)
 	}
 	return a._hasheq
+	*/
+	return 0
 }
 
 func MapHashEq(m IPersistentMap) int {
 	return HashUnordered(m)
 }
 
-func (a *APersistentMap) Invoke(key interface{}, notFound interface{}) interface{} {
+func APersistentMap_Invoke(a APersistentMap, key interface{}, notFound interface{}) interface{} {
 	return a.ValAt(key, notFound)
 }
 
@@ -97,55 +118,55 @@ func (a *APersistentMap) Invoke(key interface{}, notFound interface{}) interface
 	This is a TODO.
 */
 
-func (a *APersistentMap) Clear() {
+func APersistentMap_Clear(a APersistentMap) {
 	panic(UnsupportedOperationException)
 }
 
 // TODO
-func (a *APersistentMap) ContainsValue(val interface{}) bool {
-	return a.Values().ContainsKey(val)
+func APersistentMap_ContainsValue(a APersistentMap, val interface{}) bool {
+	return APersistentMap_Values(a).ContainsKey(val)
 }
 
-func (a *APersistentMap) Get(key interface{}) interface{} {
+func APersistentMap_Get(a APersistentMap, key interface{}) interface{} {
 	return a.ValAt(key, nil)
 }
 
-func (a *APersistentMap) IsEmpty() bool {
+func APersistentMap_IsEmpty(a APersistentMap) bool {
 	return a.Count() == 0
 }
 
 // NOTE: In Java, this returns a set primitive. Go doesn't have these, so
 // we return an IPersistentSet.
-func (a *APersistentMap) EntrySet() IPersistentSet {
+func APersistentMap_EntrySet(a APersistentMap) IPersistentSet {
 	return nil
 }
 
 // NOTE: In Java, this returns a set primitive. Go doesn't have these, so
 // we return an IPersistentSet.
-func (a *APersistentMap) KeySet() IPersistentSet {
+func APersistentMap_KeySet(a APersistentMap) IPersistentSet {
 	return nil
 }
 
 // Assoc in a new value.
-func (a *APersistentMap) Put(k interface{}, v interface{}) interface{} {
+func APersistentMap_Put(a APersistentMap, k interface{}, v interface{}) interface{} {
 	panic(UnsupportedOperationException)
 }
 
 // Take another map and merge it in.
-func (a *APersistentMap) PutAll(m interface{}) {
+func APersistentMap_PutAll(a APersistentMap, m interface{}) {
 	panic(UnsupportedOperationException)
 }
 
-func (a *APersistentMap) Remove(key interface{}) {
+func APersistentMap_Remove(a APersistentMap, key interface{}) {
 	panic(UnsupportedOperationException)
 }
 
-func (a *APersistentMap) Size() int {
+func APersistentMap_Size(a APersistentMap) int {
 	return a.Count()
 }
 
 // TODO
-func (a *APersistentMap) Values() IPersistentVector {
+func APersistentMap_Values(a APersistentMap) IPersistentVector {
 	return nil
 }
 
@@ -153,39 +174,39 @@ func (a *APersistentMap) Values() IPersistentVector {
 	APersistentMap required interface methods
 */
 
-func (a *APersistentMap) Assoc(k interface{}, v interface{}) Associative {
+func APersistentMap_Assoc(a APersistentMap, k interface{}, v interface{}) Associative {
 	panic(AbstractClassMethodException)
 }
 
-func (a *APersistentMap) AssocEx(k interface{}, v interface{}) IPersistentMap {
+func APersistentMap_AssocEx(a APersistentMap, k interface{}, v interface{}) IPersistentMap {
 	panic(AbstractClassMethodException)
 }
 
-func (a *APersistentMap) ContainsKey(k interface{}) bool {
+func APersistentMap_ContainsKey(a APersistentMap, k interface{}) bool {
 	panic(AbstractClassMethodException)
 }
 
-func (a *APersistentMap) Count() int {
+func APersistentMap_Count(a APersistentMap) int {
 	panic(AbstractClassMethodException)
 }
 
-func (a *APersistentMap) Empty() IPersistentCollection {
+func APersistentMap_Empty(a APersistentMap) IPersistentCollection {
 	panic(AbstractClassMethodException)
 }
 
-func (a *APersistentMap) EntryAt(i interface{}) IMapEntry {
+func APersistentMap_EntryAt(a APersistentMap, i interface{}) IMapEntry {
 	panic(AbstractClassMethodException)
 }
 
-func (a *APersistentMap) Seq() ISeq {
+func APersistentMap_Seq(a APersistentMap) ISeq {
 	panic(AbstractClassMethodException)
 }
 
-func (a *APersistentMap) ValAt(key interface{}, notFound interface{}) interface{} {
+func APersistentMap_ValAt(a APersistentMap, key interface{}, notFound interface{}) interface{} {
 	panic(AbstractClassMethodException)
 }
 
-func (a *APersistentMap) Without(key interface{}) IPersistentMap {
+func APersistentMap_Without(a APersistentMap, key interface{}) IPersistentMap {
 	panic(AbstractClassMethodException)
 }
 

@@ -15,7 +15,7 @@ func MapEntrySet(obj interface{}) IPersistentSet {
 	case map[interface{}]interface{}:
 		return getEntrySetFromMapPrimitive(o)
 	case APersistentMap:
-		return o.EntrySet()
+		return APersistentMap_EntrySet(o)
 	}
 	panic(InvalidTypeException)
 }
