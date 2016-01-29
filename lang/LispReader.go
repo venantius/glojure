@@ -300,10 +300,9 @@ type RegexReader struct {
 }
 
 func (rr *RegexReader) Invoke(args ...interface{}) interface{} {
-	reader, _, _, _ := unpackReaderArgs(args)
+	r, _, _, _ := unpackReaderArgs(args)
 
 	var sb bytes.Buffer
-	r := reader.(*LispReader)
 
 	for ch, err := r.ReadRune(); ch != '"'; ch, err = r.ReadRune() {
 		if err == io.EOF {
@@ -326,10 +325,9 @@ type StringReader struct {
 }
 
 func (sr *StringReader) Invoke(args ...interface{}) interface{} {
-	reader, _, _, _ := unpackReaderArgs(args)
+	r, _, _, _ := unpackReaderArgs(args)
 
 	var sb bytes.Buffer
-	r := reader.(*LispReader)
 
 	for ch, err := r.ReadRune(); ch != '"'; ch, err = r.ReadRune() {
 
@@ -396,9 +394,8 @@ type CommentReader struct {
 }
 
 func (cr *CommentReader) Invoke(args ...interface{}) interface{} {
-	reader, _, _, _:= unpackReaderArgs(args)
+	r, _, _, _:= unpackReaderArgs(args)
 
-	r := reader.(*LispReader)
 	for ch, err := r.ReadRune(); ch != '\n' && ch != '\r' && err != io.EOF; ch, err = r.ReadRune() {
 		// Advance the reader through comments
 	}
@@ -414,8 +411,7 @@ type DiscardReader struct {
 }
 
 func (dr *DiscardReader) Invoke(args ...interface{}) interface{} {
-	reader, _, opts, pendingForms := unpackReaderArgs(args)
-	r := reader.(*LispReader)
+	r, _, opts, pendingForms := unpackReaderArgs(args)
 	r.Read(true, nil, rune(0), nil, true, opts, r.ensurePending(pendingForms))
 	return r
 }
@@ -437,8 +433,7 @@ type VarReader struct {
 }
 
 func (vr *VarReader) Invoke(args ...interface{}) interface{} {
-	reader, _, opts, pendingForms := unpackReaderArgs(args)
-	r := reader.(*LispReader)
+	r, _, opts, pendingForms := unpackReaderArgs(args)
 	o := r.Read(true, nil, rune(0), nil, true, opts, r.ensurePending(pendingForms))
 	return RT.List(THE_VAR, o)
 }
@@ -448,8 +443,7 @@ type DispatchReader struct {
 }
 
 func (dr *DispatchReader) Invoke(args ...interface{}) interface{} {
-	reader, _, opts, pendingForms := unpackReaderArgs(args)
-	r := reader.(*LispReader)
+	r, _, opts, pendingForms := unpackReaderArgs(args)
 	ch, err := r.ReadRune()
 	if err == io.EOF {
 		panic("EOF while reading character")
@@ -458,7 +452,7 @@ func (dr *DispatchReader) Invoke(args ...interface{}) interface{} {
 	if fn == nil {
 		r.UnreadRune()
 		pendingForms = r.ensurePending(pendingForms)
-		result := ctorReader.Invoke(reader, ch, opts, pendingForms)
+		result := ctorReader.Invoke(r, ch, opts, pendingForms)
 
 		if result != nil {
 			return result
@@ -466,7 +460,7 @@ func (dr *DispatchReader) Invoke(args ...interface{}) interface{} {
 			panic("No dispatch macro for: " + string(ch))
 		}
 	}
-	return fn.Invoke(reader, ch, opts, pendingForms)
+	return fn.Invoke(r, ch, opts, pendingForms)
 }
 
 type FnReader struct {
@@ -550,8 +544,7 @@ type VectorReader struct {
 }
 
 func (vr *VectorReader) Invoke(args ...interface{}) interface{} {
-	reader, _, opts, pendingForms := unpackReaderArgs(args)
-	r := reader.(*LispReader)
+	r, _, opts, pendingForms := unpackReaderArgs(args)
 	return CreateLazilyPersistentVector(r.ReadDelimitedList(']', true, opts, r.ensurePending(pendingForms)))
 }
 
@@ -561,7 +554,12 @@ type MapReader struct {
 
 // TODO
 func (mr *MapReader) Invoke(args ...interface{}) interface{} {
-	return nil
+	r, _, opts, pendingForms := unpackReaderArgs(args)
+	a := r.ReadDelimitedList('}', true, opts, r.ensurePending(pendingForms))
+	if len(a) % 2 == 1 {
+		panic("Map literal must contain an even number of forms.")
+	}
+	return RT.Map(a...)
 }
 
 type SetReader struct {
@@ -613,9 +611,9 @@ func (cr *ConditionalReader) Invoke(args ...interface{}) interface{} {
 	Static methods
 */
 
-func unpackReaderArgs(args []interface{}) (interface{}, interface{}, interface{}, interface{}) {
+func unpackReaderArgs(args []interface{}) (*LispReader, interface{}, interface{}, interface{}) {
 	a, b, c, d := args[0], args[1], args[2], args[3]
-	return a, b, c, d
+	return a.(*LispReader), b, c, d
 }
 
 
@@ -648,7 +646,19 @@ func matchSymbol(s string) interface{} {
 			return nil
 		}
 		if strings.HasPrefix(s, "::") {
-			// TODO: do stuff
+			ks := InternSymbol(s[2:])
+			var kns *Namespace
+			if ks.ns != "" {
+				kns = Compiler.NamespaceFor(Compiler.CurrentNS(), ks)
+			} else {
+				kns = Compiler.CurrentNS()
+			}
+
+			if kns != nil {
+				return InternKeywordByNsAndName(kns.name.name, ks.name)
+			} else {
+				return nil
+			}
 		}
 		var isKeyword bool = strings.Index(s, ":") == 0
 		if isKeyword {

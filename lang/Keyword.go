@@ -78,6 +78,14 @@ func (k *Keyword) String() string {
 	return k._str
 }
 
+func (k *Keyword) Equals(o interface{}) bool {
+	switch k2 := o.(type) {
+	case *Keyword:
+		return k.sym.name == k2.sym.name && k.sym.ns == k2.sym.ns
+	}
+	return false
+}
+
 // TODO: A bit longer actually
 func (k *Keyword) ThrowArity() interface{} {
 	panic(IllegalArgumentException)
