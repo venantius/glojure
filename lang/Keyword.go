@@ -23,8 +23,10 @@ var keywordTable = make(map[Symbol]*Keyword) // Should be ConcurrentHashMap with
 // TODO
 func InternKeyword(sym *Symbol) *Keyword {
 	var k *Keyword
-	existingRef := keywordTable[*sym]
-	if existingRef == nil {
+
+	val, found := keywordTable[*sym]
+
+	if !found {
 		// TODO: Util.ClearCache(rq, table)
 		if sym.Meta() != nil {
 			sym = sym.WithMeta(nil).(*Symbol)
@@ -33,18 +35,20 @@ func InternKeyword(sym *Symbol) *Keyword {
 			sym:    sym,
 			hasheq: sym.HashEq() + 0x9e3779b9,
 		}
+		keywordTable[*sym] = k // TODO: Do this better\
 
-		// TODO
 	}
-	if existingRef == nil {
+	if val == nil {
+		return k
+	}
+	existingK := val
+	if existingK != nil {
+		return existingK
+	}
 
-		if k != nil {
-			return k
-		}
-		return nil
-	}
-	//TODO...more
-	return nil
+	// Something went wrong.
+	delete(keywordTable, *sym)
+	return InternKeyword(sym)
 }
 
 func InternKeywordByNsAndName(ns string, name string) *Keyword {

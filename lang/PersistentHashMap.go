@@ -1,5 +1,8 @@
 package lang
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+)
 
 /*
 	Note copied from JVM Clojure.
@@ -39,7 +42,13 @@ var EMPTY_PERSISTENT_HASH_MAP = &PersistentHashMap{
 	nullValue: nil,
 }
 
-var NOT_FOUND interface{}
+func (m *PersistentHashMap) Root() INode {
+	return m.root
+}
+
+// SENTINEL VALUE; might be better off generating a new struct of sentinel values with a random
+// integer as their default value, but we'll leave that well enough alone for now.
+var NOT_FOUND int = rand.Int()
 
 func CreatePersistentHashMapFromMap(other map[interface{}]interface{}) IPersistentMap {
 	ret := EMPTY_PERSISTENT_HASH_MAP.AsTransient()
@@ -83,6 +92,10 @@ func CreatePersistentHashMapWithCheck(init ...interface{}) *PersistentHashMap {
 		}
 	}
 	return ret.Persistent().(*PersistentHashMap)
+}
+
+func (m *PersistentHashMap) String() string {
+	return RT.PrintString(m)
 }
 
 func (m *PersistentHashMap) ContainsKey(key interface{}) bool {
@@ -133,7 +146,7 @@ func (m *PersistentHashMap) Assoc(key interface{}, val interface{}) Associative 
 	addedLeaf := &Box{}
 	var newroot INode
 	if m.root == nil {
-		newroot = EMPTY_BITMAP_INDEXED_NODE
+		newroot = CreateEmptyBitmapIndexedNode()
 	} else {
 		newroot = m.root
 	}
@@ -322,7 +335,10 @@ type TransientHashMap struct {
 	leafFlag  *Box
 }
 
-// TODO
+func (t *TransientHashMap) String() string {
+	return RT.PrintString(t)
+}
+
 func (t *TransientHashMap) doAssoc(key interface{}, val interface{}) ITransientMap {
 	if key == nil {
 		if t.nullValue != val {
@@ -337,7 +353,7 @@ func (t *TransientHashMap) doAssoc(key interface{}, val interface{}) ITransientM
 	t.leafFlag.val = nil
 	var n INode
 	if t.root == nil {
-		n = EMPTY_BITMAP_INDEXED_NODE
+		n = CreateEmptyBitmapIndexedNode()
 	} else {
 		n = t.root
 	}
@@ -459,7 +475,7 @@ func (n *ArrayNode) Assoc(shift int, hash int, key interface{}, val interface{},
 		arr = cloneAndSetINodeArray(
 			n.array,
 			idx,
-			EMPTY_BITMAP_INDEXED_NODE.Assoc(
+			CreateEmptyBitmapIndexedNode().Assoc(
 				shift+5,
 				hash,
 				key,
@@ -537,7 +553,7 @@ func (n *ArrayNode) AssocWithEdit(edit bool, shift int, hash int, key interface{
 	var idx int = int(Mask(hash, shift))
 	var node INode = n.array[idx]
 	if node == nil {
-		var editable *ArrayNode = n.editAndSet(edit, idx, EMPTY_BITMAP_INDEXED_NODE.AssocWithEdit(edit, shift+5, hash, key, val, addedLeaf))
+		var editable *ArrayNode = n.editAndSet(edit, idx, CreateEmptyBitmapIndexedNode().AssocWithEdit(edit, shift+5, hash, key, val, addedLeaf))
 		editable.count++
 		return editable
 	}
@@ -602,7 +618,7 @@ func (s *ArrayNodeSeq) WithMeta(meta IPersistentMap) interface{} {
 }
 
 func (s *ArrayNodeSeq) First() interface{} {
-	return s.First()
+	return s.s.First()
 }
 
 func (s *ArrayNodeSeq) Next() ISeq {
@@ -626,10 +642,16 @@ type BitmapIndexedNode struct {
 	edit   bool // TODO: Again, with the thread-locking. Not sure what the deal is here though
 }
 
-var EMPTY_BITMAP_INDEXED_NODE = &BitmapIndexedNode{
+var empty_bitmap_indexed_node = &BitmapIndexedNode{
 	edit:   false,
 	bitmap: 0,
 	array:  make([]interface{}, 0),
+}
+
+func CreateEmptyBitmapIndexedNode() *BitmapIndexedNode {
+	var t *BitmapIndexedNode = &BitmapIndexedNode{}
+	*t = *empty_bitmap_indexed_node
+	return t
 }
 
 func (n *BitmapIndexedNode) index(bit int) int {
@@ -676,14 +698,14 @@ func (bin *BitmapIndexedNode) AssocWithEdit(edit bool, shift int, hash int, key 
 		if n >= 16 {
 			var nodes []INode = make([]INode, 32)
 			var jdx uint = Mask(hash, shift)
-			nodes[jdx] = EMPTY_BITMAP_INDEXED_NODE.AssocWithEdit(edit, shift + 5, hash, key, val, addedLeaf)
+			nodes[jdx] = CreateEmptyBitmapIndexedNode().AssocWithEdit(edit, shift + 5, hash, key, val, addedLeaf)
 			var j int = 0
 			for i := uint(0); i < 32; i++ {
 				if ((bin.bitmap >> i) & 1) != 0 {
 					if bin.array[j] == nil {
 						nodes[i] = bin.array[j+1].(INode)
 					} else {
-						nodes[i] = EMPTY_BITMAP_INDEXED_NODE.AssocWithEdit(edit, shift+5, hashPersistentHashMap(bin.array[j]), bin.array[j], bin.array[j+1], addedLeaf)
+						nodes[i] = CreateEmptyBitmapIndexedNode().AssocWithEdit(edit, shift+5, hashPersistentHashMap(bin.array[j]), bin.array[j], bin.array[j+1], addedLeaf)
 					}
 					j += 2
 				}
@@ -735,7 +757,6 @@ func (n *BitmapIndexedNode) Find(shift int, hash int, key interface{}, notFound 
 	return notFound
 }
 
-// TODO
 func (n *BitmapIndexedNode) NodeSeq() ISeq {
 	return CreateNodeSeq(n.array)
 }
@@ -934,7 +955,6 @@ func (n *HashCollisionNode) Without(shift int, hash int, key interface{}) INode 
 	panic(NotYetImplementedException)
 }
 
-// TODO
 func (n *HashCollisionNode) Find(shift int, hash int, key interface{}, notFound interface{}) interface{} {
 	var idx int = n.FindIndex(key)
 	if idx < 0 {
@@ -968,8 +988,6 @@ func (n *HashCollisionNode) Fold(combinef IFn, reducef IFn, fjtask IFn, fjfork I
 func (n *HashCollisionNode) FindIndex(key interface{}) int {
 	for i := 0; i < 2 * n.count; i += 2 {
 		if Util.Equiv(key, n.array[i]) {
-			fmt.Println("They were equals!", key, n.array[i])
-
 			return i
 		}
 	}
@@ -1114,7 +1132,7 @@ func createNode(edit bool, shift int, key1 interface{}, val1 interface{}, key2ha
 		}
 	}
 	var addedLeaf *Box = &Box{}
-	return EMPTY_BITMAP_INDEXED_NODE.AssocWithEdit(edit, shift, key1hash, key1, val1, addedLeaf).AssocWithEdit(edit, shift, key2hash, key2, val2, addedLeaf)
+	return CreateEmptyBitmapIndexedNode().AssocWithEdit(edit, shift, key1hash, key1, val1, addedLeaf).AssocWithEdit(edit, shift, key2hash, key2, val2, addedLeaf)
 }
 
 func bitpos(hash int, shift int) int {

@@ -58,6 +58,11 @@ var readeval interface{} = RT.ReadTrueFalseUnknown(RT.GetEnvWithDefault("clojure
 var READEVAL = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval).SetDynamic()
 
 
+// TODO...above
+var LINE_KEY *Keyword = InternKeywordByNsName("line")
+var COLUMN_KEY *Keyword = InternKeywordByNsName("column")
+// TODO...below
+
 // TODO...there's more content in between here
 var CURRENT_NS *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*ns"), CLOJURE_NS).SetDynamic()
 
@@ -166,6 +171,7 @@ func (_ *rt) Print(x interface{}, w *bufio.Writer) {
 	case fmt.Stringer:
 		w.WriteString(obj.String())
 	default:
+
 		w.WriteString(fmt.Sprintf("%v", obj))
 	}
 

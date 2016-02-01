@@ -2,8 +2,6 @@ package lang
 
 // NOTE: Implements ISeq, Sequential, List, IPending, IHashEq
 type LazySeq struct {
-	*Obj
-
 	fn IFn
 	sv interface{}
 	s  ISeq
