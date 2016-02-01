@@ -309,6 +309,10 @@ func (m *PersistentArrayMap) Cons(o interface{}) IPersistentCollection{
 	return APersistentMap_Cons(m, o)
 }
 
+func (m *PersistentArrayMap) Equals(o interface{}) bool {
+	return APersistentMap_Equals(m, o)
+}
+
 func (m *PersistentArrayMap) Equiv(o interface{}) bool{
 	return APersistentMap_Equiv(m, o)
 }
@@ -358,10 +362,12 @@ func (ms *PersistentArrayMapSeq) WithMeta(meta IPersistentMap) interface{} {
 
 /*
 	TransientArrayMap
+
+	Implements abstract class ATransientArrayMap
 */
 
 type TransientArrayMap struct {
-	ATransientMap
+	AFn
 
 	// NOTE: in JVM Clojure, we also have `volatile Thread owner`
 	// We've changed that to `edit` here, as with TransientVectors
@@ -379,7 +385,7 @@ func (t *TransientArrayMap) indexOf(key interface{}) int {
 	return -1
 }
 
-func (t *TransientArrayMap) doAssoc(key interface{}, val interface{}) ITransientAssociative {
+func (t *TransientArrayMap) doAssoc(key interface{}, val interface{}) ITransientMap {
 	i := t.indexOf(key)
 	if i >= 0 { // already have key
 		if t.array[i+1] != val { // no change, no op
@@ -424,7 +430,7 @@ func (t *TransientArrayMap) doCount() int {
 	return t.len / 2
 }
 
-func (t *TransientArrayMap) doPersistent() IPersistentCollection {
+func (t *TransientArrayMap) doPersistent() IPersistentMap {
 	t.ensureEditable()
 	t.edit = false
 	a := make([]interface{}, t.len)
@@ -438,4 +444,32 @@ func (t *TransientArrayMap) ensureEditable() {
 	if t.edit == false {
 		panic(TransientUsedAfterPersistentCallError)
 	}
+}
+
+/*
+	Abstract methods (TransientArrayMap)
+ */
+
+func (t *TransientArrayMap) Assoc(k interface{}, v interface{}) ITransientMap {
+	return ATransientMap_Assoc(t, k, v)
+}
+
+func (t *TransientArrayMap) Conj(o interface{}) ITransientCollection {
+	return ATransientMap_Conj(t, o)
+}
+
+func (t *TransientArrayMap) Count() int {
+	return ATransientMap_Count(t)
+}
+
+func (t *TransientArrayMap) Persistent() IPersistentCollection {
+	return ATransientMap_Persistent(t)
+}
+
+func (t *TransientArrayMap) ValAt(key interface{}, notFound interface{}) interface{} {
+	return ATransientMap_ValAt(t, key, notFound)
+}
+
+func (t *TransientArrayMap) Without(key interface{}) ITransientMap {
+	return ATransientMap_Without(t, key)
 }

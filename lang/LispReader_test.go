@@ -49,6 +49,7 @@ func TestVectorReaderWithKeyword(t *testing.T) {
  */
 
 func TestMapReaderWithKeyword(t *testing.T) {
+	// Start with a PersistentArrayMap
 	r := strings.NewReader("{:a :b :c :d}")
 	y := lang.CreateLispReader(r).Read(false, io.EOF, rune(0), nil, false, nil, nil)
 	a := make([]interface{}, 4)
@@ -57,10 +58,27 @@ func TestMapReaderWithKeyword(t *testing.T) {
 	a[2] = lang.InternKeywordByNsName("c")
 	a[3] = lang.InternKeywordByNsName("d")
 	m := lang.CreatePersistentArrayMapWithCheck(a)
-	fmt.Println(y, reflect.TypeOf(y))
 
-	fmt.Println(m, reflect.TypeOf(m))
 	if !(m.Equals(y)) {
 		t.Error("Failed to initialize array maps that should have been equal.")
+	}
+
+
+	// Let's do a PersistentHashMap next
+	r2 := strings.NewReader("{:a :b :c :d :e :f :g :h :i :j :k :l :m :n :o :p :q :r :s :t :u :v :w :x :y :z}")
+	y2 := lang.CreateLispReader(r2).Read(false, io.EOF, rune(0), nil, false, nil, nil)
+	phm := make([]interface{}, 26)
+	phm[0] = a[0]
+	phm[1] = a[1]
+	phm[2] = lang.InternKeywordByNsName("c")
+	phm[3] = lang.InternKeywordByNsName("d")
+
+	phm2 := lang.CreatePersistentHashMap(phm...)
+
+	fmt.Println(y2, reflect.TypeOf(y2))
+
+	fmt.Println(phm2, reflect.TypeOf(phm2))
+	if !phm2.Equals(y2) {
+		t.Error("Failed to initailize hash maps that should have been equal")
 	}
 }
