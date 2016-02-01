@@ -22,8 +22,8 @@ type APersistentVector interface {
 	IPersistentVector
 	IHashEq
 	IFn
+	IEquals
 
-	Equals(o interface{}) bool
 	HashCode() int
 	IndexOf(o interface{}) int
 	// Iterator() Iterator // TODO: don't want to deal with this

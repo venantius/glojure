@@ -73,7 +73,7 @@ func (_ *rt) Map(init... interface{}) IPersistentMap {
 	} else if len(init) <= HASHTABLE_THRESHOLD {
 		return CreatePersistentArrayMapWithCheck(init)
 	}
-	return CreatePersistentHashMapWithCheck(init)
+	return CreatePersistentHashMapWithCheck(init...)
 }
 
 func (_ *rt) IsReduced(r interface{}) bool {

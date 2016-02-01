@@ -1,4 +1,5 @@
 package lang
+import "fmt"
 
 type util struct{}
 
@@ -7,6 +8,7 @@ var Util = util{}
 // NOTE / TODO: This is a heavily overloaded function
 func (_ *util) Equiv(k1 interface{}, k2 interface{}) bool {
 	if k1 == k2 {
+		fmt.Println(k1, k2)
 		return true
 	}
 	if k1 != nil {
@@ -90,6 +92,8 @@ func (_ *util) EquivPred(k1 interface{}) EquivPred {
 
 // TODO
 func (_ *util) PCEquiv(k1 interface{}, k2 interface{}) bool {
+	panic(NotYetImplementedException)
+
 	return false
 }
 
@@ -123,12 +127,21 @@ func (_ *util) Hash(i interface{}) int {
 
 // TODO
 func (_ *util) HashEq(o interface{}) int {
+	if o == nil {
+		return 0
+	}
+ 	switch obj := o.(type) {
+	case IHashEq:
+		return obj.HashEq()
+	}
+	panic("Tried to call Util.HashEq on something that wasn't hashable.")
 	return 0
 }
 
-// TODO
-func (_ *util) HashCombine(k1 interface{}, k2 interface{}) int {
-	return 0
+func (_ *util) HashCombine(seed int, hash int) int {
+	// JVM Clojure note: "A la boost"
+	seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2)
+	return seed
 }
 
 func (_ *util) SneakyThrow(t interface{}) {
@@ -145,7 +158,8 @@ func (_ *util) SneakyThrow(t interface{}) {
 	~ @venantius
 */
 
+// TODO
 func (_ *util) StringCompareTo(first string, second string) int {
-	// TODO
+	panic(NotYetImplementedException)
 	return 0
 }

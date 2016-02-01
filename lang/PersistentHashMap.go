@@ -1,4 +1,5 @@
 package lang
+import "fmt"
 
 /*
 	Note copied from JVM Clojure.
@@ -16,11 +17,13 @@ package lang
 /*
 	PersistentHashMap
 
+	Implements abstract class: APersistentMap
+
 	Implements: IEditableCollection, IObj, IMapIterable, IKVReduce
 */
 
 type PersistentHashMap struct {
-	APersistentMap
+	AFn
 
 	_meta     IPersistentMap
 	count     int
@@ -52,7 +55,7 @@ func CreatePersistentHashMapFromSeq(items ISeq) *PersistentHashMap {
 	for ; items != nil; items = items.Next().Next() {
 		ret = ret.Assoc(items.First(), RT.Second(items)).(*TransientHashMap)
 	}
-	return nil
+	return ret.Persistent().(*PersistentHashMap)
 }
 
 func CreatePersistentHashMapFromSeqWithCheck(init ...interface{}) *PersistentHashMap {
@@ -68,18 +71,18 @@ func CreatePersistentHashMap(init ...interface{}) *PersistentHashMap {
 	for i := 0 ; i < len(init); i += 2 {
 		ret = ret.Assoc(init[i], init[i+1]).(*TransientHashMap)
 	}
-	return nil
+	return ret.Persistent().(*PersistentHashMap)
 }
 
 func CreatePersistentHashMapWithCheck(init ...interface{}) *PersistentHashMap {
-	ret := EMPTY_PERSISTENT_HASH_MAP.AsTransient()
+	var ret ITransientMap = EMPTY_PERSISTENT_HASH_MAP.AsTransient()
 	for i := 0 ; i < len(init); i += 2 {
-		ret = ret.Assoc(init[i], init[i+1]).(*TransientHashMap)
+		ret = ret.Assoc(init[i], init[i+1])
 		if ret.Count() != i/2 + 1 {
-			panic("Duplicate key: ") //  + init[i]
+			panic(fmt.Sprintf("Duplicate key: %v", init[i]))
 		}
 	}
-	return nil
+	return ret.Persistent().(*PersistentHashMap)
 }
 
 func (m *PersistentHashMap) ContainsKey(key interface{}) bool {
@@ -127,7 +130,7 @@ func (m *PersistentHashMap) Assoc(key interface{}, val interface{}) Associative 
 			nullValue: val,
 		}
 	}
-	addedLeaf := Box{}
+	addedLeaf := &Box{}
 	var newroot INode
 	if m.root == nil {
 		newroot = EMPTY_BITMAP_INDEXED_NODE
@@ -209,7 +212,7 @@ func (m *PersistentHashMap) Without(key interface{}) IPersistentMap {
 
 // TODO
 func (m *PersistentHashMap) Iterator(f IFn) *Iterator {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO: Also, KeyIterator() and ValIterator() func
@@ -234,7 +237,7 @@ func (m *PersistentHashMap) KVReduce(f IFn, init interface{}) interface{} {
 
 // TODO
 func (m *PersistentHashMap) Fold(n int, combinef IFn, reducef IFn, fjinvoke IFn, fjtask IFn, fjfork IFn, fjjoin IFn) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 func (m *PersistentHashMap) Count() int {
@@ -273,6 +276,7 @@ func (m *PersistentHashMap) AsTransient() *TransientHashMap {
 		count:     m.count,
 		hasNull:   m.hasNull,
 		nullValue: m.nullValue,
+		leafFlag:  &Box{},
 	}
 }
 
@@ -281,11 +285,33 @@ func (m *PersistentHashMap) Meta() IPersistentMap {
 }
 
 /*
+	Abstract methods (PersistentHashMap)
+ */
+
+func (m *PersistentHashMap) Cons(o interface{}) IPersistentCollection {
+	return APersistentMap_Cons(m, o)
+}
+
+func (m *PersistentHashMap) Equals(o interface{}) bool {
+	return APersistentMap_Equals(m, o)
+}
+
+func (m *PersistentHashMap) Equiv(o interface{}) bool {
+	return APersistentMap_Equiv(m, o)
+}
+
+func (m *PersistentHashMap) HashEq() int {
+	return APersistentMap_HashEq(m)
+}
+
+/*
 	TransientHashMap
+
+	Implements abstract class ATransientMap
 */
 
 type TransientHashMap struct {
-	ATransientMap
+	AFn
 
 	_meta     IPersistentMap
 	edit      bool
@@ -293,7 +319,7 @@ type TransientHashMap struct {
 	count     int
 	hasNull   bool
 	nullValue interface{}
-	leafFlag  Box
+	leafFlag  *Box
 }
 
 // TODO
@@ -315,7 +341,7 @@ func (t *TransientHashMap) doAssoc(key interface{}, val interface{}) ITransientM
 	} else {
 		n = t.root
 	}
-	n.AssocWithEdit(t.edit, 0, hashPersistentHashMap(key), key, val, t.leafFlag)
+	n = n.AssocWithEdit(t.edit, 0, hashPersistentHashMap(key), key, val, t.leafFlag)
 	if n != t.root {
 		t.root = n
 	}
@@ -350,7 +376,7 @@ func (t *TransientHashMap) doWithout(key interface{}) ITransientMap {
 	return t
 }
 
-func (t *TransientHashMap) doPersistent() IPersistentCollection {
+func (t *TransientHashMap) doPersistent() IPersistentMap {
 	t.edit = false
 	return &PersistentHashMap{
 		count:     t.count,
@@ -385,6 +411,34 @@ func (t *TransientHashMap) ensureEditable() {
 }
 
 /*
+	Abstract methods (TransientHashMap)
+ */
+
+func (t *TransientHashMap) Assoc(key interface{}, val interface{}) ITransientMap {
+	return ATransientMap_Assoc(t, key, val)
+}
+
+func (t *TransientHashMap) Conj(o interface{}) ITransientCollection {
+	return ATransientMap_Conj(t, o)
+}
+
+func (t *TransientHashMap) Count() int {
+	return ATransientMap_Count(t)
+}
+
+func (t *TransientHashMap) Persistent() IPersistentCollection {
+	return ATransientMap_Persistent(t)
+}
+
+func (t *TransientHashMap) ValAt(key interface{}, notFound interface{}) interface{} {
+	return ATransientMap_ValAt(t, key, notFound)
+}
+
+func (t *TransientHashMap) Without(key interface{}) ITransientMap {
+	return ATransientMap_Without(t, key)
+}
+
+/*
 	ArrayNode
 
 	Implements: INode
@@ -397,7 +451,7 @@ type ArrayNode struct {
 }
 
 // TODO
-func (n *ArrayNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
+func (n *ArrayNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf *Box) INode {
 	idx := int(Mask(hash, shift))
 	node := n.array[idx]
 	if node == nil {
@@ -432,59 +486,72 @@ func (n *ArrayNode) Assoc(shift int, hash int, key interface{}, val interface{},
 
 // TODO
 func (n *ArrayNode) Without(shift int, hash int, key interface{}) INode {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *ArrayNode) Find(shift int, hash int, key interface{}, notFound interface{}) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *ArrayNode) NodeSeq() ISeq {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *ArrayNode) Iterator(f IFn) *Iterator {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *ArrayNode) KVReduce(f IFn, init interface{}) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *ArrayNode) Fold(combinef IFn, reducef IFn, fjtask IFn, fjfork IFn, fjjoin IFn) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO: FoldTasks
 
 // TODO
 func (n *ArrayNode) ensureEditable(edit bool) *ArrayNode {
-	return nil
+	panic(NotYetImplementedException)
 }
 
-// TODO
 func (n *ArrayNode) editAndSet(edit bool, i int, node INode) *ArrayNode {
-	return nil
+	var editable *ArrayNode = n.ensureEditable(edit)
+	editable.array[i] = n
+	return editable
 }
 
 // TODO
 func (n *ArrayNode) pack(edit bool, idx int) INode {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
-func (n *ArrayNode) AssocWithEdit(edit bool, shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
-	return nil
+func (n *ArrayNode) AssocWithEdit(edit bool, shift int, hash int, key interface{}, val interface{}, addedLeaf *Box) INode {
+	var idx int = int(Mask(hash, shift))
+	var node INode = n.array[idx]
+	if node == nil {
+		var editable *ArrayNode = n.editAndSet(edit, idx, EMPTY_BITMAP_INDEXED_NODE.AssocWithEdit(edit, shift+5, hash, key, val, addedLeaf))
+		editable.count++
+		return editable
+	}
+	var n2 INode = node.AssocWithEdit(edit, shift + 5, hash, key, val, addedLeaf)
+	// TODO: Verify the following equality check here actually works.
+	if n2 == node {
+		return n2
+	}
+	return n.editAndSet(edit, idx, n2)
 }
 
 // TODO
-func (n *ArrayNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf Box) INode {
-	return nil
+func (n *ArrayNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf *Box) INode {
+	panic(NotYetImplementedException)
 }
 
 /*
@@ -565,73 +632,169 @@ var EMPTY_BITMAP_INDEXED_NODE = &BitmapIndexedNode{
 	array:  make([]interface{}, 0),
 }
 
-// TODO
-func (n *BitmapIndexedNode) index() int {
-	return 0
-	// return Integer.bitCount(bitmap & (bit - 1))
+func (n *BitmapIndexedNode) index(bit int) int {
+	return Bitcount(n.bitmap & (bit - 1))
 }
 
 // TODO
-func (n *BitmapIndexedNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
-	return nil
+func (n *BitmapIndexedNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf *Box) INode {
+	panic(NotYetImplementedException)
 }
 
-// TODO
-func (n *BitmapIndexedNode) AssocWithEdit(edit bool, shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
-	return nil
+func (bin *BitmapIndexedNode) AssocWithEdit(edit bool, shift int, hash int, key interface{}, val interface{}, addedLeaf *Box) INode {
+	var bit int = bitpos(hash, shift)
+	var idx int = bin.index(bit)
+	if (bin.bitmap & bit) != 0 {
+		keyOrNull := bin.array[2*idx]
+		valOrNode := bin.array[2*idx+1]
+		if keyOrNull == nil {
+			var n INode = valOrNode.(INode).AssocWithEdit(edit, shift + 5, hash, key, val, addedLeaf)
+			if n == valOrNode {
+				return bin
+			}
+			return bin.editAndSetOne(edit, 2*idx+1, n)
+		}
+		if Util.Equiv(key, keyOrNull) {
+			if val == valOrNode {
+				return bin
+			}
+			return bin.editAndSetOne(edit, 2*idx+1, val)
+		}
+		addedLeaf.val = addedLeaf
+		return bin.editAndSetTwo(edit, 2*idx, nil, 2*idx+1, createNode(edit, shift+5, keyOrNull, valOrNode, hash, key, val))
+	} else {
+		var n int = Bitcount(bin.bitmap)
+		if (n*2 < len(bin.array)) {
+			addedLeaf.val = addedLeaf
+			var editable *BitmapIndexedNode = bin.ensureEditable(edit)
+			copy(editable.array[2*(idx+1):2*(n-idx)], editable.array[2*idx:2*(n-idx)])
+			editable.array[2*idx] = key
+			editable.array[2*idx+1] = val
+			editable.bitmap |= bit
+			return editable
+		}
+		if n >= 16 {
+			var nodes []INode = make([]INode, 32)
+			var jdx uint = Mask(hash, shift)
+			nodes[jdx] = EMPTY_BITMAP_INDEXED_NODE.AssocWithEdit(edit, shift + 5, hash, key, val, addedLeaf)
+			var j int = 0
+			for i := uint(0); i < 32; i++ {
+				if ((bin.bitmap >> i) & 1) != 0 {
+					if bin.array[j] == nil {
+						nodes[i] = bin.array[j+1].(INode)
+					} else {
+						nodes[i] = EMPTY_BITMAP_INDEXED_NODE.AssocWithEdit(edit, shift+5, hashPersistentHashMap(bin.array[j]), bin.array[j], bin.array[j+1], addedLeaf)
+					}
+					j += 2
+				}
+			}
+			return &ArrayNode{
+				edit: edit,
+				count: n + 1,
+				array: nodes,
+			}
+		} else {
+			var newArray []interface{} = make([]interface{}, 2*(n+4))
+			copy(newArray[:2*idx], bin.array[:2*idx])
+			newArray[2*idx] = key
+			addedLeaf.val = addedLeaf
+			newArray[2*idx+1] = val
+			copy(newArray[2*(idx+1):2*(idx+1)+2*(n-idx)], bin.array[2*idx:2*idx+2*(n-idx)])
+			var editable *BitmapIndexedNode = bin.ensureEditable(edit)
+			editable.array = newArray
+			editable.bitmap |= bit
+			return editable
+		}
+	}
 }
 
 // TODO
 func (n *BitmapIndexedNode) Without(shift int, hash int, key interface{}) INode {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
-func (n *BitmapIndexedNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf Box) INode {
-	return nil
+func (n *BitmapIndexedNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf *Box) INode {
+	panic(NotYetImplementedException)
 }
 
-// TODO
 func (n *BitmapIndexedNode) Find(shift int, hash int, key interface{}, notFound interface{}) interface{} {
-	return nil
+	var bit int = bitpos(hash, shift)
+	if (n.bitmap & bit) == 0 {
+		return nil
+	}
+	var idx int = n.index(bit)
+	keyOrNull := n.array[2*idx]
+	valOrNode := n.array[2*idx+1]
+	if keyOrNull == nil {
+		return valOrNode.(INode).Find(shift+5, hash, key, notFound)
+	}
+	if Util.Equiv(key, keyOrNull) {
+		return CreateMapEntry(keyOrNull, valOrNode)
+	}
+	return notFound
 }
 
 // TODO
 func (n *BitmapIndexedNode) NodeSeq() ISeq {
-	return nil
+	return CreateNodeSeq(n.array)
 }
 
 // TODO
 func (n *BitmapIndexedNode) Iterator(f IFn) *Iterator {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *BitmapIndexedNode) KVReduce(f IFn, init interface{}) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *BitmapIndexedNode) Fold(combinef IFn, reducef IFn, fjtask IFn, fjfork IFn, fjjoin IFn) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
-// TODO
 // NOTE: This also has another version that takes an AtomicReference to a thread
 // as an argument.
-func (n *BitmapIndexedNode) ensureEditable(edit bool) *BitmapIndexedNode {
-	return nil
+// NOTE: See TransientVector.ensureEditable
+func (bin *BitmapIndexedNode) ensureEditable(edit bool) *BitmapIndexedNode {
+	if edit == true {
+		return bin
+	}
+	var n int = Bitcount(bin.bitmap)
+	var l int
+	if n >= 0 {
+		l = 2 * (n + 1)
+	} else {
+		l = 4
+	}
+	var newArray []interface{} = make([]interface{}, l)
+	copy(newArray[:2*n], bin.array[:2*n])
+	return &BitmapIndexedNode{
+		edit: edit,
+		bitmap: bin.bitmap,
+		array: newArray,
+	}
 }
 
-// TODO
-// NOTE: overloaded
-func (n *BitmapIndexedNode) editAndSet(edit bool, i int, a interface{}, j int, b interface{}) *BitmapIndexedNode {
-	return nil
+// NOTE: How did I do this in other circumstances?
+func (n *BitmapIndexedNode) editAndSetOne(edit bool, i int, a interface{}) *BitmapIndexedNode {
+	var editable *BitmapIndexedNode = n.ensureEditable(edit)
+	editable.array[i] = a
+	return editable
+}
+
+func (n *BitmapIndexedNode) editAndSetTwo(edit bool, i int, a interface{}, j int, b interface{}) *BitmapIndexedNode {
+	var editable *BitmapIndexedNode = n.ensureEditable(edit)
+	editable.array[i] = a
+	editable.array[j] = b
+	return editable
 }
 
 // TODO
 func (n *BitmapIndexedNode) editAndRemovePair(edit bool, bit int, i int) *BitmapIndexedNode {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 /*
@@ -649,17 +812,17 @@ type NodeIter struct {
 
 // TODO
 func (n *NodeIter) advance() bool {
-	return true
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *NodeIter) HasNext() bool {
-	return true
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *NodeIter) Next() interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
@@ -683,12 +846,47 @@ type NodeSeq struct {
 // TODO
 // NOTE: Overloaded
 func CreateNodeSeq(array []interface{}) ISeq {
+	return createNodeSeq(array, 0, nil)
+}
+
+func createNodeSeq(array []interface{}, i int, s ISeq) ISeq {
+	if s != nil {
+		return &NodeSeq{
+			_meta: nil,
+			array: array,
+			i: i,
+			s: s,
+		}
+	}
+	for j := i; j < len(array); j += 2 {
+		if array[j] != nil {
+			return &NodeSeq{
+				_meta: nil,
+				array: array,
+				i: j,
+				s: nil,
+			}
+		}
+		node := array[j+1]
+		if node != nil {
+			node := node.(INode)
+			var nodeSeq ISeq = node.NodeSeq()
+			if nodeSeq != nil {
+				return &NodeSeq{
+					_meta: nil,
+					array: array,
+					i: j + 2,
+					s: nodeSeq,
+				}
+			}
+		}
+	}
 	return nil
 }
 
 // TODO
 func KVReduceNodeSeq(array []interface{}, f IFn, init interface{}) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 func (s *NodeSeq) WithMeta(meta IPersistentMap) *NodeSeq {
@@ -709,17 +907,9 @@ func (s *NodeSeq) First() interface{} {
 
 func (s *NodeSeq) Next() ISeq {
 	if s.s != nil {
-		return &NodeSeq{
-			array: s.array,
-			i:     s.i,
-			s:     s.Next(),
-		}
+		return createNodeSeq(s.array, s.i, s.s.Next())
 	}
-	return &NodeSeq{
-		array: s.array,
-		i:     s.i + 2,
-		s:     nil,
-	}
+	return createNodeSeq(s.array, s.i + 2, nil)
 }
 
 /*
@@ -735,68 +925,132 @@ type HashCollisionNode struct {
 }
 
 // TODO
-func (n *HashCollisionNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
-	return nil
+func (n *HashCollisionNode) Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf *Box) INode {
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *HashCollisionNode) Without(shift int, hash int, key interface{}) INode {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *HashCollisionNode) Find(shift int, hash int, key interface{}, notFound interface{}) interface{} {
-	return nil
+	var idx int = n.FindIndex(key)
+	if idx < 0 {
+		return notFound
+	}
+	if Util.Equiv(key, n.array[idx]) {
+		return n.array[idx+1]
+	}
+	return notFound
 }
 
-// TODO
 func (n *HashCollisionNode) NodeSeq() ISeq {
-	return nil
+	return CreateNodeSeq(n.array)
 }
 
 // TODO
 func (n *HashCollisionNode) Iterator(f IFn) *Iterator {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *HashCollisionNode) KVReduce(f IFn, init interface{}) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (n *HashCollisionNode) Fold(combinef IFn, reducef IFn, fjtask IFn, fjfork IFn, fjjoin IFn) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
-// TODO
 func (n *HashCollisionNode) FindIndex(key interface{}) int {
-	return 0
+	for i := 0; i < 2 * n.count; i += 2 {
+		if Util.Equiv(key, n.array[i]) {
+			fmt.Println("They were equals!", key, n.array[i])
+
+			return i
+		}
+	}
+	return -1
 }
 
-// TODO
 func (n *HashCollisionNode) ensureEditableNode(edit bool) *HashCollisionNode {
-	return nil
+	if edit == true {
+		return n
+	}
+	var newArray []interface{} = make([]interface{}, 2*(n.count+1))
+	copy(newArray[:2*n.count], n.array[:2*n.count])
+	return &HashCollisionNode{
+		edit: edit,
+		hash: n.hash,
+		count: n.count,
+		array: newArray,
+	}
 }
 
-// TODO
 func (n *HashCollisionNode) ensureEditableWithArgs(edit bool, count int, array []interface{}) *HashCollisionNode {
-	return nil
+	if edit == true {
+		n.array = array
+		n.count = count
+		return n
+	}
+	return &HashCollisionNode{
+		edit: edit,
+		hash: n.hash,
+		count: count,
+		array: array,
+	}
+}
+
+func (n *HashCollisionNode) editAndSetOne(edit bool, i int, a interface{}) *HashCollisionNode {
+	var editable *HashCollisionNode = n.ensureEditableNode(edit)
+	editable.array[i] = a
+	return editable
+}
+
+func (n *HashCollisionNode) editAndSetTwo(edit bool, i int, a interface{}, j int, b interface{}) *HashCollisionNode {
+	var editable *HashCollisionNode = n.ensureEditableNode(edit)
+	editable.array[i] = a
+	editable.array[j] = b
+	return editable
 }
 
 // TODO
-func (n *HashCollisionNode) editAndSet(edit bool, i int, a interface{}, j int, b interface{}) *HashCollisionNode {
-	return nil
+func (n *HashCollisionNode) AssocWithEdit(edit bool, shift int, hash int, key interface{}, val interface{}, addedLeaf *Box) INode {
+	if hash == n.hash {
+		var idx int = n.FindIndex(key)
+		if idx != -1 {
+			if n.array[idx+1] == val {
+				return n
+			}
+			return n.editAndSetOne(edit, idx+1, val)
+		}
+		if len(n.array) > 2 * n.count {
+			addedLeaf.val = addedLeaf
+			var editable *HashCollisionNode = n.editAndSetTwo(edit, 2*n.count, key, 2*n.count+1, val)
+			editable.count++
+			return editable
+		}
+		var newArray []interface{} = make([]interface{}, len(n.array)+2)
+		copy(newArray[:len(n.array)], n.array[:len(n.array)])
+		newArray[len(n.array)] = key
+		newArray[len(n.array)+1] = val
+		addedLeaf.val = addedLeaf
+		return n.ensureEditableWithArgs(edit, n.count+1, newArray)
+	}
+	var b *BitmapIndexedNode = &BitmapIndexedNode{
+		edit: edit,
+		bitmap: bitpos(n.hash, shift),
+		array: make([]interface{}, 4),
+	}
+	return b.AssocWithEdit(edit, shift, hash, key, val, addedLeaf)
 }
 
 // TODO
-func (n *HashCollisionNode) AssocWithEdit(edit bool, shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode {
-	return nil
-}
-
-// TODO
-func (n *HashCollisionNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf Box) INode {
-	return nil
+func (n *HashCollisionNode) WithoutWithEdit(edit bool, shift int, hash int, key interface{}, removedLeaf *Box) INode {
+	panic(NotYetImplementedException)
 }
 
 /*
@@ -805,7 +1059,7 @@ func (n *HashCollisionNode) WithoutWithEdit(edit bool, shift int, hash int, key 
 
 // NOTE: I think this is right but I'm not totally sure.
 func Mask(hash int, shift int) uint {
-	return (uint(hash) >> uint(shift)) & 31
+	return (uint(hash) >> uint(shift)) & 0x01f
 }
 
 func hashPersistentHashMap(k interface{}) int {
@@ -844,9 +1098,23 @@ func removePair(array []interface{}, i int) []interface{} {
 	return newArray
 }
 
-// TODO
 func createNode(edit bool, shift int, key1 interface{}, val1 interface{}, key2hash int, key2 interface{}, val2 interface{}) INode {
-	return nil
+	var key1hash int = hashPersistentHashMap(key1)
+	if key1hash == key2hash {
+		arr := make([]interface{}, 4)
+		arr[0] = key1
+		arr[1] = val1
+		arr[2] = key2
+		arr[3] = val2
+		return &HashCollisionNode{
+			edit: true, // TODO: Is this correct? Should this be initalized as false?
+			hash: key1hash,
+			count: 2,
+			array: arr,
+		}
+	}
+	var addedLeaf *Box = &Box{}
+	return EMPTY_BITMAP_INDEXED_NODE.AssocWithEdit(edit, shift, key1hash, key1, val1, addedLeaf).AssocWithEdit(edit, shift, key2hash, key2, val2, addedLeaf)
 }
 
 func bitpos(hash int, shift int) int {

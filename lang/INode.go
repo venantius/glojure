@@ -1,7 +1,7 @@
 package lang
 
 type INode interface {
-	Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf Box) INode
+	Assoc(shift int, hash int, key interface{}, val interface{}, addedLeaf *Box) INode
 	Without(shift int, hash int, key interface{}) INode
 
 	// Also returns interface{}
@@ -15,7 +15,7 @@ type INode interface {
 		hash int,
 		key interface{},
 		val interface{},
-		addedLeaf Box,
+		addedLeaf *Box,
 	) INode
 
 	WithoutWithEdit(
@@ -23,7 +23,7 @@ type INode interface {
 		shift int,
 		hash int,
 		key interface{},
-		removedLeaf Box,
+		removedLeaf *Box,
 	) INode
 
 	KVReduce(f IFn, init interface{}) interface{}

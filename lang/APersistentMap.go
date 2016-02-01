@@ -1,7 +1,5 @@
 package lang
 
-import "fmt"
-
 /*
 	APersistentMap
 
@@ -17,6 +15,7 @@ type APersistentMap interface {
 	MapEquivalence
 	IHashEq
 	IFn
+	IEquals
 }
 
 func APersistentMap_Cons(a APersistentMap, obj interface{}) IPersistentCollection {
@@ -55,7 +54,6 @@ func MapEquals(m1 IPersistentMap, obj interface{}) bool {
 		return false
 	case IPersistentMap:
 		for s := m1.Seq(); s != nil; s = s.Next() {
-			fmt.Println("Got to here!")
 			e := s.First().(IMapEntry)
 
 			found := m.ContainsKey(e.Key())

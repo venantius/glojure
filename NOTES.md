@@ -1,3 +1,14 @@
+2016-01-29
+----------
+* The initialization methods for PersistentHashMaps vs PersistentArrayMaps are different (the former
+takes varargs, the latter takes interface slices). This sort of difference in constructor function
+interfaces is not good, and these two should be brought in line.
+* Right now there are various interface methods that I've chosen to have default to the least-specific
+common denominator. For instance, ITransientAssociative forces implementing structs to default to always
+provide ITransientCollection, even though individual sub-interfaces in JVM Clojure require the return
+value to be, e.g. ITransientMap or ITransientVector. I think this approach is fine for now and can always
+be refactored later. `Conj`, `Assoc`, `Persistent` are particularly guilty culprits here.
+
 2016-01-24
 ----------
 * I've made an active decision not to attempt to implement functions in JVM clojure that are

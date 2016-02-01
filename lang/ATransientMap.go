@@ -6,11 +6,19 @@ package lang
 	Implements: ITransientMap
 */
 
-type ATransientMap struct {
-	AFn
+type ATransientMap interface {
+	ITransientMap
+	IFn
+
+	ensureEditable()
+	doAssoc(key interface{}, val interface{}) ITransientMap
+	doWithout(key interface{}) ITransientMap
+	doValAt(key interface{}, notFound interface{}) interface{}
+	doCount() int
+	doPersistent() IPersistentMap
 }
 
-func (t *ATransientMap) Conj(o interface{}) ITransientCollection {
+func ATransientMap_Conj(t ATransientMap, o interface{}) ITransientCollection {
 	t.ensureEditable()
 	switch obj := o.(type) {
 	case MapEntry:
@@ -24,36 +32,36 @@ func (t *ATransientMap) Conj(o interface{}) ITransientCollection {
 	ret := t
 	for es := RT.Seq(o); es != nil; es = es.Next() {
 		var e MapEntry = es.First().(MapEntry)
-		ret = ret.Assoc(e.GetKey(), e.GetValue()).(*ATransientMap)
+		ret = ret.Assoc(e.GetKey(), e.GetValue()).(ATransientMap)
 	}
 	return ret
 }
 
-func (t *ATransientMap) Invoke(arg1 interface{}, notFound interface{}) interface{} {
+func ATransientMap_Invoke(t ATransientMap, arg1 interface{}, notFound interface{}) interface{} {
 	return t.ValAt(arg1, notFound)
 }
 
-func (t *ATransientMap) Assoc(key interface{}, val interface{}) ITransientAssociative {
+func ATransientMap_Assoc(t ATransientMap, key interface{}, val interface{}) ITransientMap {
 	t.ensureEditable()
 	return t.doAssoc(key, val)
 }
 
-func (t *ATransientMap) Without(key interface{}) ITransientMap {
+func ATransientMap_Without(t ATransientMap, key interface{}) ITransientMap {
 	t.ensureEditable()
 	return t.doWithout(key)
 }
 
-func (t *ATransientMap) Persistent() IPersistentCollection {
+func ATransientMap_Persistent(t ATransientMap) IPersistentCollection {
 	t.ensureEditable()
 	return t.doPersistent()
 }
 
-func (t *ATransientMap) ValAt(key interface{}, notFound interface{}) interface{} {
+func ATransientMap_ValAt(t ATransientMap, key interface{}, notFound interface{}) interface{} {
 	t.ensureEditable()
 	return t.doValAt(key, notFound)
 }
 
-func (t *ATransientMap) Count() int {
+func ATransientMap_Count(t ATransientMap) int {
 	t.ensureEditable()
 	return t.doCount()
 }
@@ -62,7 +70,8 @@ func (t *ATransientMap) Count() int {
 	Abstract methods
 */
 
-func (t *ATransientMap) doAssoc(key interface{}, val interface{}) ITransientMap {
+/*
+func (t *ATransientMap) ATransientMap_doAssoc(key interface{}, val interface{}) ITransientMap {
 	panic(AbstractClassMethodException)
 }
 
@@ -84,3 +93,4 @@ func (t *ATransientMap) doWithout(key interface{}) ITransientMap {
 func (t *ATransientMap) ensureEditable() {
 	panic(AbstractClassMethodException)
 }
+*/
