@@ -2,6 +2,7 @@ package lang
 
 import (
 	"container/list" // linked list
+	"fmt"
 )
 
 /* Declaration block: Primordial */
@@ -29,7 +30,7 @@ func (p *Primordial) doInvoke(args interface{}) interface{} {
 	for s := RT.Seq(args); s != nil; s = s.Next() {
 		list.PushBack(s.First())
 	}
-	return create(list)
+	return CreatePersistentList(list)
 }
 
 func (p *Primordial) InvokeStatic(args ISeq) interface{} {
@@ -47,7 +48,7 @@ func (p *Primordial) InvokeStatic(args ISeq) interface{} {
 	for s := RT.Seq(args); s != nil; s = s.Next() {
 		list.PushBack(s.First())
 	}
-	return create(list)
+	return CreatePersistentList(list)
 }
 
 func (p *Primordial) WithMeta(meta IPersistentMap) IObj {
@@ -62,8 +63,6 @@ func (p *Primordial) Meta() IPersistentMap {
 
 // NOTE: Implements IPersistentList, IReduce, List, Counted
 type PersistentList struct {
-	*ASeq
-
 	_meta IPersistentMap // Inherited from Obj -> ASeq
 
 	_first interface{}
@@ -71,11 +70,20 @@ type PersistentList struct {
 	_count int
 }
 
-func create(init *list.List) IPersistentList {
-	var ret IPersistentList
-	ret = EMPTY_PERSISTENT_LIST
+func CreatePersistentList(init *list.List) IPersistentList {
+	var ret IPersistentList = EMPTY_PERSISTENT_LIST
 	for i := init.Back(); i != nil; i = i.Prev() {
 		ret = ret.Cons(i).(IPersistentList)
+	}
+	return ret
+}
+
+func CreatePersistentListFromInterfaceSlice(init []interface{}) IPersistentList {
+	var ret IPersistentList = EMPTY_PERSISTENT_LIST
+	for i := len(init) - 1; i > -1; i-- {
+		fmt.Println(i)
+		fmt.Println(init)
+		ret = ret.Cons(init[i]).(IPersistentList)
 	}
 	return ret
 }
@@ -119,7 +127,11 @@ func (l *PersistentList) Empty() IPersistentCollection {
 	return EMPTY_PERSISTENT_LIST.WithMeta(l.Meta())
 }
 
-func (l *PersistentList) WithMeta(meta IPersistentMap) *PersistentList {
+func (l *PersistentList) Meta() IPersistentMap {
+	return l._meta
+}
+
+func (l *PersistentList) WithMeta(meta IPersistentMap) IPersistentList {
 	if meta != l._meta {
 		return &PersistentList{
 			_meta:  meta,
@@ -156,11 +168,35 @@ func (l *PersistentList) Reduce(f IFn) interface{} {
 	return ret
 }
 
-/* Declaration Block: EmptyList */
+/*
+	Abstract methods (PersistentList)
+ */
+
+func (l *PersistentList) Equals(o interface{}) bool {
+
+	panic(NotYetImplementedException)
+}
+
+func (l *PersistentList) Equiv(o interface{}) bool {
+	panic(NotYetImplementedException)
+}
+
+func (l *PersistentList) Seq() ISeq {
+	panic(NotYetImplementedException)
+}
+
+func (l *PersistentList) More() ISeq {
+	panic(NotYetImplementedException)
+}
+
+/*
+	EmptyList
+
+	Implements IPersistentList, List, ISeq, Counted, IHashEq
+*/
 
 // NOTE: Implements IPersistentList, List, ISeq, Counted, IHashEq
 type EmptyList struct {
-	*Obj
 	PersistentList
 
 	// inherit from Obj
@@ -230,7 +266,11 @@ func (e *EmptyList) Empty() IPersistentCollection {
 	return e
 }
 
-func (e *EmptyList) WithMeta(meta IPersistentMap) *EmptyList {
+func (e *EmptyList) Meta() IPersistentMap {
+	return e._meta
+}
+
+func (e *EmptyList) WithMeta(meta IPersistentMap) IPersistentList {
 	if meta != e.Meta() {
 		return &EmptyList{_meta: meta}
 	}

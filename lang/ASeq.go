@@ -1,9 +1,8 @@
 package lang
+import "container/list"
 
 // NOTE: Implements ISeq, Sequential, List, Serializable, IHashEq
 type ASeq struct {
-	Obj
-
 	_hash   int
 	_hasheq int
 }
@@ -37,27 +36,47 @@ func (s *ASeq) Equiv(i interface{}) bool {
 	return ms == nil
 }
 
-// TODO
-func (s *ASeq) Equals(ob interface{}) bool {
-	return true
+func ASeq_Equals(s ASeq, obj interface{}) bool {
+	if s == obj {
+		return true
+	}
+	switch o := obj.(type) {
+	case Sequential:
+		// do nothing
+	case []interface{}:
+		// not sure about this, but we'll see.
+	case list.List:
+		// not sure about this either
+	default:
+		return false
+	}
+	var ms ISeq = RT.Seq(obj)
+	for sq := ASeq_Seq(s); sq != nil; sq, ms = sq.Next(), ms.Next() {
+		if (ms == nil) || !Util.Equals(sq.First(), ms.First()) {
+			return false
+		}
+	}
+	return ms == nil
 }
+
+
 
 //TODO
 func (s *ASeq) HashCode() int {
-	return 0
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (s *ASeq) HashEq() int {
-	return 0
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (s *ASeq) Count() int {
-	return 0
+	panic(NotYetImplementedException)
 }
 
-func (s *ASeq) Seq() ISeq {
+func ASeq_Seq(s ASeq) ISeq {
 	return s
 }
 
@@ -67,7 +86,7 @@ func (s *ASeq) Cons(i interface{}) IPersistentCollection {
 
 // TODO: Implement
 func (s *ASeq) More() ISeq {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 /*

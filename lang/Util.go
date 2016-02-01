@@ -1,5 +1,4 @@
 package lang
-import "fmt"
 
 type util struct{}
 
@@ -8,12 +7,24 @@ var Util = util{}
 // NOTE / TODO: This is a heavily overloaded function
 func (_ *util) Equiv(k1 interface{}, k2 interface{}) bool {
 	if k1 == k2 {
-		fmt.Println(k1, k2)
 		return true
 	}
 	if k1 != nil {
-
-		// check if TODO...
+		if IsNumeric(k1) && IsNumeric(k2) {
+			return Numbers.Equal(k1, k2)
+		}
+		switch t1 := k1.(type) {
+		case IPersistentCollection:
+			return Util.PCEquiv(k1, k2)
+		case IEquals:
+			return t1.Equals(k2)
+		}
+		switch t2 := k2.(type) {
+		case IPersistentCollection:
+			return Util.PCEquiv(k1, k2)
+		case IEquals:
+			return t2.Equals(k1)
+		}
 	}
 	return false
 }

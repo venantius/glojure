@@ -525,9 +525,20 @@ type ListReader struct {
 	AFn
 }
 
-// TODO
 func (lr *ListReader) Invoke(args ...interface{}) interface{} {
-	return nil
+	r, _, opts, pendingForms := unpackReaderArgs(args)
+	line := -1
+	column := -1
+	l := r.ReadDelimitedList(')', true, opts, r.ensurePending(pendingForms))
+	if len(l) == 0 {
+		return EMPTY_PERSISTENT_LIST
+	}
+	s := CreatePersistentListFromInterfaceSlice(l)
+	if line != -1 {
+		return s.WithMeta(RT.Map(LINE_KEY, line, COLUMN_KEY, column))
+	} else {
+		return s
+	}
 }
 
 type EvalReader struct {

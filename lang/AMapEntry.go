@@ -1,9 +1,14 @@
 package lang
 
-// NOTE: Implements IMapEntry
-type AMapEntry struct {
-	APersistentVector
-}
+/*
+	AMapEntry
+
+	Implements abstract class: APersistentVector
+
+	Implements IMapEntry
+ */
+
+type AMapEntry struct {}
 
 func (a *AMapEntry) Nth(i int) interface{} {
 	if i == 0 {

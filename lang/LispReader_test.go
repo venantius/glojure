@@ -63,22 +63,63 @@ func TestMapReaderWithKeyword(t *testing.T) {
 		t.Error("Failed to initialize array maps that should have been equal.")
 	}
 
-
 	// Let's do a PersistentHashMap next
 	r2 := strings.NewReader("{:a :b :c :d :e :f :g :h :i :j :k :l :m :n :o :p :q :r :s :t :u :v :w :x :y :z}")
 	y2 := lang.CreateLispReader(r2).Read(false, io.EOF, rune(0), nil, false, nil, nil)
-	phm := make([]interface{}, 26)
-	phm[0] = a[0]
-	phm[1] = a[1]
-	phm[2] = lang.InternKeywordByNsName("c")
-	phm[3] = lang.InternKeywordByNsName("d")
+	var phm []interface{}
+
+	phm = []interface{}{
+		lang.InternKeywordByNsName("a"),
+		lang.InternKeywordByNsName("b"),
+		lang.InternKeywordByNsName("a"), // Note that we're implicitly checking that duplicate
+		lang.InternKeywordByNsName("b"), // keys and values don't do weird things.
+		lang.InternKeywordByNsName("c"),
+		lang.InternKeywordByNsName("d"),
+		lang.InternKeywordByNsName("e"),
+		lang.InternKeywordByNsName("f"),
+		lang.InternKeywordByNsName("g"),
+		lang.InternKeywordByNsName("h"),
+		lang.InternKeywordByNsName("i"),
+		lang.InternKeywordByNsName("j"),
+		lang.InternKeywordByNsName("k"),
+		lang.InternKeywordByNsName("l"),
+		lang.InternKeywordByNsName("m"),
+		lang.InternKeywordByNsName("n"),
+		lang.InternKeywordByNsName("o"),
+		lang.InternKeywordByNsName("p"),
+		lang.InternKeywordByNsName("q"),
+		lang.InternKeywordByNsName("r"),
+		lang.InternKeywordByNsName("s"),
+		lang.InternKeywordByNsName("t"),
+		lang.InternKeywordByNsName("u"),
+		lang.InternKeywordByNsName("v"),
+		lang.InternKeywordByNsName("w"),
+		lang.InternKeywordByNsName("x"),
+		lang.InternKeywordByNsName("y"),
+		lang.InternKeywordByNsName("z"),
+	}
 
 	phm2 := lang.CreatePersistentHashMap(phm...)
 
-	fmt.Println(y2, reflect.TypeOf(y2))
-
-	fmt.Println(phm2, reflect.TypeOf(phm2))
 	if !phm2.Equals(y2) {
 		t.Error("Failed to initailize hash maps that should have been equal")
+	}
+}
+
+// Test basic persistent lists
+
+func TestListReader(t *testing.T) {
+	// Start with a PersistentArrayMap
+	r := strings.NewReader("(+ 1 1)")
+	y := lang.CreateLispReader(r).Read(false, io.EOF, rune(0), nil, false, nil, nil)
+
+	fmt.Println("Y2",
+		// y,
+		reflect.TypeOf(y))
+
+	fmt.Printf("%#v", y.(*lang.PersistentList).First())
+
+	if !y.(*lang.PersistentList).Equals(true) {
+		t.Error("Failed to read persistent list")
 	}
 }
