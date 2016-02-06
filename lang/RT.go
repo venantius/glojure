@@ -9,21 +9,21 @@ import (
 	"fmt"
 )
 
-// In case it wasn't obvious (it wasn't to me), RT stands for RunTime
-type rt struct{}
-
 /*
 	NOTE: I've made the design decision for now to mimic static methods as best I can,
 	which in this case means creating a private class and a single public object for that class.
 
 	In practice I think that RT.java is more or less a catchall for a host of static methods
-	that could just as easily be generally pure functions.
+	that could just as easily be generally pure functions. I find having an empty struct
+	associated with them to be easier to read, semantically. I don't think this is idiomatic,
+	but then, neither is having such a massive package.
 
-	I'll decide whether or not I want to change this later.
+	Also, in case it wasn't obvious, RT stands for runtime.
 */
 
-var T bool = true
-var F bool = false
+type rt struct{}
+var RT = rt{}
+
 var LOADER_SUFFIX string = "__init"
 
 
@@ -43,6 +43,7 @@ func (_ *rt) ReadTrueFalseUnknown(s string) interface{} {
 	return InternKeywordByNsName("unknown")
 }
 
+// GetEnvWithDefault is like System.getProperty in Java
 func (_ *rt) GetEnvWithDefault(key string, defaultVal string) string {
 	val := os.Getenv(key)
 	if val != "" {
@@ -51,29 +52,50 @@ func (_ *rt) GetEnvWithDefault(key string, defaultVal string) string {
 	return defaultVal
 }
 
-// TODO...more here
 var CLOJURE_NS = FindOrCreateNamespace(InternSymbol("clojure.core"))
 var OUT *Var = InternVar(CLOJURE_NS, InternSymbol("*out*"), os.Stdout).SetDynamic()
 // TODO: This should actually be a LineNumberingPushbackReader for os.Stdin
 var IN *Var = InternVar(CLOJURE_NS, InternSymbol("*in*"), os.Stdin).SetDynamic()
 var ERR *Var = InternVar(CLOJURE_NS, InternSymbol("*err*"), os.Stderr).SetDynamic()
+var TAG_KEY *Keyword = InternKeywordByNsName("tag")
+var CONST_KEY *Keyword = InternKeywordByNsName("const")
+var AGENT *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*agent*"), nil).SetDynamic()
 var readeval interface{} = RT.ReadTrueFalseUnknown(RT.GetEnvWithDefault("clojure.read.eval", "true"))
 var READEVAL = InternVar(CLOJURE_NS, InternSymbol("*read-eval*"), readeval).SetDynamic()
+var DATA_READERS = InternVar(CLOJURE_NS, InternSymbol("*data-readers*"), RT.Map()).SetDynamic()
+var DEFAULT_DATA_READERS_FN = InternVar(CLOJURE_NS, InternSymbol("*default-data-readers-fn*"), RT.Map()).SetDynamic()
+var DEFAULT_DATA_READERS = InternVar(CLOJURE_NS, InternSymbol("*default-data-readers*"), RT.Map()).SetDynamic()
 
-
-// TODO...above
+// TODO...more
 var LINE_KEY *Keyword = InternKeywordByNsName("line")
 var COLUMN_KEY *Keyword = InternKeywordByNsName("column")
-// TODO...below
+var FILE_KEY *Keyword = InternKeywordByNsName("file")
+var DECLARE_KEY *Keyword = InternKeywordByNsName("declared")
+var DOC_KEY *Keyword = InternKeywordByNsName("doc")
+// TODO...more
 
-// TODO...there's more content in between here
-var CURRENT_NS *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*ns"), CLOJURE_NS).SetDynamic()
+var LOAD_FILE *Symbol = InternSymbolByNsname("load-file")
+var IN_NAMESPACE *Symbol = InternSymbolByNsname("in-ns")
+var NAMESPACE *Symbol = InternSymbolByNsname("ns")
+var CMD_LINE_ARGS *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*command-line-args*"), nil).SetDynamic()
+var CURRENT_NS *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*ns*"), CLOJURE_NS).SetDynamic()
+
+var PRINT_META *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*print-meta*"), false).SetDynamic()
+var PRINT_READABLY *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*print-readably*"), true).SetDynamic()
+var PRINT_DUP *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*print-dup*"), false).SetDynamic()
+// TODO...more
+
+var IN_NS_VAR *Var = InternVar(CLOJURE_NS, IN_NAMESPACE, false)
+var NS_VAR *Var = InternVar(CLOJURE_NS, NAMESPACE, false)
+var FN_LOADER_VAR *Var = InternVar(CLOJURE_NS, InternSymbolByNsname("*fn-loader*"), nil).SetDynamic()
+var PRINT_INITIALIZED *Var = InternVarByNsAndSym(CLOJURE_NS, InternSymbolByNsname("print-initialized"))
+// TOOD...more
+
 
 func (_ *rt) EMPTY_ARRAY() []interface{} {
 	return make([]interface{}, 1)
 }
 
-var RT = rt{} // Mock static methods
 
 // Overloaded with optional init argument.
 func (_ *rt) Var(ns string, name string, init interface{}) *Var {

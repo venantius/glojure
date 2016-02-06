@@ -2,14 +2,12 @@ package lang
 
 import (
 	"bytes"
-	"sync"
-
+	"golang.org/x/net/context"
+	"fmt"
 )
 
 /*
 	Assorted class variables
-
-
 */
 
 // TODO: I found this really useful: http://www.golangbootcamp.com/book/concurrency
@@ -26,18 +24,30 @@ var rev int = 0 // maybe atomic integer since this will be shared.
 /*
 	Var
 
+	Extends: ARef
+
 	Implements: IFn, IRef, Settable
+
+	Notes: in JVM Clojure, the implementation of Vars is heavily dependent on the JVM's support
+	for thread-local storage. In the almost total absence of a simple analog here in Go, I've
+	chosen to instead use the x/net/context package instead as a way of passing explicit
+	bindings.
 */
 
 type Var struct {
 	ARef
 
+	// AReference
 	_meta       IPersistentMap
+
+	// ARef
+	validator IFn
+	watches *PersistentHashMap // default EMPTY
+
 	rev         int
 	privateMeta IPersistentMap
 	root        interface{}
-	dyanmic     bool
-	threadBound bool // atomicboolean TODO
+	dynamic     bool
 	sym         *Symbol
 	ns          *Namespace
 }
@@ -63,15 +73,15 @@ func (v *Var) String() string {
 
 func (v *Var) SetDynamic(args ...bool) *Var {
 	if len(args) == 0 {
-		v.dyanmic = true
+		v.dynamic = true
 	} else {
-		v.dyanmic = args[0]
+		v.dynamic = args[0]
 	}
 	return v
 }
 
 func (v *Var) IsDynamic() bool {
-	return v.IsDynamic()
+	return v.dynamic
 }
 
 func InternVar(ns *Namespace, sym *Symbol, root interface{}) *Var {
@@ -112,7 +122,6 @@ func CreateVarFromNothing() *Var {
 	return &Var{
 		ns:          nil,
 		sym:         nil,
-		threadBound: false, // TODOAtomicBoolean
 		root: VarUnbound{
 			v: v,
 		},
@@ -127,23 +136,85 @@ func CreateVarFromRoot(root interface{}) *Var {
 	}
 }
 
-func (v *Var) isBound() bool {
-	// TODO
-	panic(NotYetImplementedException)
+// unexported type and key for var context utility functions
+type key int
+var varKey key = 0
+
+// Set the new Var root for the provided context
+func setVarBindingForContext(ctx context.Context, val *Frame) context.Context {
+	return context.WithValue(ctx, varKey, val)
 }
 
-// TODO
-func (v *Var) Get() interface{} {
-	panic(NotYetImplementedException)
+// Retrieve the new Var root from the provided context
+func getVarBindingFromContext(ctx context.Context) (*Frame, bool) {
+	r, ok := ctx.Value(varKey).(*Frame)
+	return r, ok
 }
 
-// TODO: this is a naive and stupid implementation
-func (v *Var) Deref() interface{} {
+// pushBindingsForContext creates a new *Frame with the provided bindings added to
+// the bindings on the provided Context's frame. It returns a new Context with the
+// new *Frame.
+func pushBindingsForContext(ctx context.Context, bindings Associative) context.Context {
+	f, ok := getVarBindingFromContext(ctx)
+	if !ok {
+		panic("Stored var value wasn't an instance of *lang.Frame")
+	}
+	var bmap Associative = f.bindings
+	for bs := bindings.Seq(); bs != nil; bs = bs.Next() {
+		var e IMapEntry = bs.First().(IMapEntry)
+		var v *Var = e.Key().(*Var)
+		if !v.dynamic {
+			panic(fmt.Sprintf("Can't dynamically bind non-dynamic var: %v/%v", v.ns, v.sym))
+		}
+		v.validate(v.GetValidator(), e.Val())
+		bmap = bmap.Assoc(v, e.Val())
+	}
+	return setVarBindingForContext(ctx, &Frame{
+		bindings: bmap,
+		prev: f,
+	})
+}
+
+// popBindingsForContext returns a new Context with the previous *Frame.
+func popBindingsForContext(ctx context.Context) context.Context {
+
+}
+
+// IsBound checks to see if the Var has a root or local binding.
+func (v *Var) IsBound(ctx context.Context) bool {
+	r, ok := getVarBindingFromContext(ctx)
+	if ok == false {
+		panic("Stored var value wasn't an instance of *lang.Frame")
+	}
+	return v.HasRoot() || r != nil && r.bindings.ContainsKey(v)
+}
+
+// Get retrieves the value stored at the root or local binding of this Var.
+func (v *Var) Get(ctx context.Context) interface{} {
+	r, ok := getVarBindingFromContext(ctx)
+	if ok == false {
+		panic("Stored var value wasn't an instance of *lang.Frame")
+	}
+	if r == nil {
+		return v.root
+	}
+	return v.Deref(ctx)
+}
+
+// Deref retreives the value stored at the root or local binding of this Var.
+func (v *Var) Deref(ctx context.Context) interface{} {
+	r, ok := getVarBindingFromContext(ctx)
+	if (r != nil) {
+		return r.bindings.EntryAt(v)
+	}
 	return v.root
 }
 
 // TODO
 func (v *Var) SetValidator(vf IFn) {
+	if v.HasRoot() {
+		v.validate()
+	}
 	panic(NotYetImplementedException)
 }
 
@@ -213,33 +284,24 @@ func (v *Var) BindRoot(root interface{}) {
 	v.root = root
 }
 
-func (v *Var) Fn() IFn {
-	return v.Deref().(IFn)
+func (v *Var) Fn(ctx context.Context) IFn {
+	return v.Deref(ctx).(IFn)
 }
 
-func (v *Var) Call() interface{} {
-	return v.Invoke()
+func (v *Var) Call(ctx context.Context) interface{} {
+	return v.Invoke(ctx)
 }
 
-func (v *Var) Run() {
-	v.Invoke()
+func (v *Var) Run(ctx context.Context) {
+	v.Invoke(ctx)
 }
 
-func (v *Var) Invoke(args ...interface{}) interface{} {
-	return v.Fn().Invoke(args...)
+func (v *Var) Invoke(ctx context.Context, args ...interface{}) interface{} {
+	return v.Fn(ctx).Invoke(args...)
 }
 
 func (v *Var) ApplyTo(arglist ISeq) interface{} {
 	return AFn_ApplyToHelper(v, arglist)
-}
-
-/*
-	VarTBox [TBox]
-*/
-
-type VarTBox struct {
-	val  interface{}
-	lock *sync.Mutex // instead of keeping track of thread
 }
 
 /*
@@ -284,36 +346,9 @@ func (f *Frame) Clone() interface{} {
 	}
 }
 
-/*
-	VarFrameDvals
-
-	This class is just a ThreadLocal<Frame> in JVM Clojure with an initialValue() func.
-*/
-
-type VarFrameDvals struct {
-	Frame
-
-	lock *sync.Mutex
-}
-
-func (d *VarFrameDvals) InitialValue() *Frame {
-	return TOP_FRAME
-}
-
-// TODO
-func getThreadBindingFrame() interface{} {
-	return nil
-}
-
-// TODO
-func cloneThreadBindingFrame() interface{} {
-	return nil
-}
-
-// TODO
-func resetThreadBindingFrame() interface{} {
-	return nil
-}
+// In JVM Clojure, dvals is a ThreadLocal<Frame>. Here we pass it around in a context.
+// First we initialize dvals to TOP_FRAME
+var dvals *Frame = TOP_FRAME
 
 // TODO...still most of this file.
 

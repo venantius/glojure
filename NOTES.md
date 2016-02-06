@@ -1,3 +1,7 @@
+2016-02-06
+----------
+* I'm going to mark places where JVM Clojure has features that I'm punting on for now with `ROADMAP`.
+
 2016-02-05
 ----------
 * I've been wondering for a long time how `clojure.core` actually gets loaded, since I couldn't

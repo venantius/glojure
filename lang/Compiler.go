@@ -3,6 +3,7 @@ package lang
 import (
 	"io"
 	"math/rand"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -50,9 +51,34 @@ var loadNs *Symbol = InternSymbolByNsname("load-ns")
 var inlineKey *Symbol = InternSymbolByNsname("inline")
 // TODO: more declarations here...
 
+var LOCAL_ENV *Var = CreateVarFromRoot(nil).SetDynamic()
+var LOOP_LOCALS *Var = CreateVarFromNothing().SetDynamic()
+var LOOP_LABEL *Var = CreateVarFromNothing().SetDynamic()
+var CONSTANTS *Var = CreateVarFromNothing().SetDynamic()
+var CONSTANT_IDS *Var = CreateVarFromNothing().SetDynamic()
+var KEYWORD_CALLSITES *Var = CreateVarFromNothing().SetDynamic()
+var PROTOCOL_CALLSITES *Var = CreateVarFromNothing().SetDynamic()
+var VAR_CALLSITES *Var = CreateVarFromNothing().SetDynamic()
+var KEYWORDS *Var = CreateVarFromNothing().SetDynamic()
+var VARS *Var = CreateVarFromNothing().SetDynamic()
+var METHOD *Var = CreateVarFromRoot(nil).SetDynamic()
+var IN_CATCH_FINALLY *Var = CreateVarFromNothing()
+// TODO...more declarations.
 
 var COMPILE_PATH *Var = InternVar(FindOrCreateNamespace(InternSymbolByNsname("clojure.core")),
 	InternSymbolByNsname("*compile-path*"), nil).SetDynamic()
+
+// TODO..more declarations...
+var LINE *Var = CreateVarFromRoot(0).SetDynamic()
+var COLUMN *Var = CreateVarFromRoot(0).SetDynamic()
+
+type ObjExpr struct {
+	name string
+	internalName string
+	thisName string
+	keywords IPersistentMap
+	constants *PersistentVector
+}
 
 /*
 	Compiler struct and methods
@@ -62,8 +88,10 @@ type compiler struct{}
 
 var Compiler = &compiler{}
 
+// TODO
 func (_ *compiler) CurrentNS() *Namespace {
-	return CURRENT_NS.Deref().(*Namespace)
+	panic(NotYetImplementedException)
+	// return CURRENT_NS.Deref().(*Namespace)
 }
 
 func (_ *compiler) NamespaceFor(inns *Namespace, sym *Symbol) *Namespace {
@@ -90,9 +118,11 @@ func (_ *compiler) Macroexpand(form interface{}) interface{} {
 func (_ *compiler) Compile(rdr *io.Reader, sourcePath string, sourceName string) interface{} {
 	// TODO: Do we need this? I don't know.
 	// #VESTIGIAL
+	/*
 	if COMPILE_PATH.Deref() == nil {
 		panic("*compile-path* not set")
 	}
+	*/
 
 	var EOF int = rand.Int() // TODO: Sentinel value
 	var ret interface{}
@@ -105,31 +135,36 @@ func (_ *compiler) Compile(rdr *io.Reader, sourcePath string, sourceName string)
 }
 
 // In JVM Clojure, gen is a GeneratorAdapter. We don't have an analog for that here.
-func (_ *compiler) Compile1(gen interface{}, objx ObjExpr, form interface{}) {
+func (_ *compiler) Compile1(ctx context.Context, gen interface{}, objx ObjExpr, form interface{}) {
 	// TODO: some initial set-up.
+	line := LINE.Deref(ctx)
+	column := COLUMN.Deref(ctx)
 
-	// try, catch (might want better error handling here)
+	ctx = pushBindingsForContext(ctx, RT.Map(LINE, line, COLUMN, column)) // ROADMAP: Classloader
+	// try block begins here
 	form = Compiler.Macroexpand(form)
 	switch f := form.(type) {
 	case ISeq:
 		if Util.Equals(RT.First(form), DO) {
-			for s := RT.Next(form); s != nil; s = RT.Next(s) {
-				Compiler.Compile1(gen, objx, RT.First(s))
+			for s := RT.Next(f); s != nil; s = RT.Next(s) {
+				Compiler.Compile1(ctx, gen, objx, RT.First(s))
 			}
 		}
 	default:
 		expr := Compiler.Analyze(EVAL, form)
-		objx.keywords = KEYWORDS.Deref()
-		objx.vars = VAR.Deref()
-		objx.constants = CONSTANTS.Deref()
+		objx.keywords = KEYWORDS.Deref(ctx).(IPersistentMap)
+		objx.vars = VARS.Deref(ctx).(IPersistentMap)
+		objx.constants = CONSTANTS.Deref().(*PersistentVector)
 		expr.Emit(EXPRESSION, objx, gen)
 		expr.Eval()
 	}
-	// TODO: Var.Pop thread bindings
 }
 
 func (_ *compiler) Eval(form interface{}, freshLoader bool) interface{} {
 	createdLoader := false // do we need this?
+	panic(NotYetImplementedException)
+}
 
-
+func (_ *compiler) Analyze(a interface{}, b interface{}) interface{} {
+	panic(NotYetImplementedException)
 }
