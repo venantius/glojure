@@ -18,15 +18,15 @@ func (a *AFn) Invoke(args ...interface{}) interface{} {
 
 // TODO: Implement me!
 func (a *AFn) ApplyTo(arglist ISeq) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO: Implement me!
-func ApplyToHelper(ifn IFn, arglist ISeq) interface{} {
-	return nil
+func AFn_ApplyToHelper(ifn IFn, arglist ISeq) interface{} {
+	panic(NotYetImplementedException)
 }
 
 // TODO: Implement me!
 func (a *AFn) ThrowArity(n int) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }

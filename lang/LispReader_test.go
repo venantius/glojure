@@ -113,13 +113,11 @@ func TestListReader(t *testing.T) {
 	r := strings.NewReader("(+ 1 1)")
 	y := lang.CreateLispReader(r).Read(false, io.EOF, rune(0), nil, false, nil, nil)
 
-	fmt.Println("Y2",
-		// y,
-		reflect.TypeOf(y))
+	fmt.Println("Y2", y, reflect.TypeOf(y))
 
-	fmt.Printf("%#v", y.(*lang.PersistentList).First())
+	pl := lang.CreatePersistentListFromInterfaceSlice([]interface{}{lang.InternSymbolByNsname("+"), 1, 1})
 
-	if !y.(*lang.PersistentList).Equals(true) {
+	if !y.(*lang.PersistentList).Equals(pl) {
 		t.Error("Failed to read persistent list")
 	}
 }

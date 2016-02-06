@@ -14,7 +14,10 @@ type rt struct{}
 
 /*
 	NOTE: I've made the design decision for now to mimic static methods as best I can,
-	which in this case means creating a private class and a single public object for that class. In practice I think that RT.java is more or less a catchall for a host of static methods that could just as easily be generally pure functions.
+	which in this case means creating a private class and a single public object for that class.
+
+	In practice I think that RT.java is more or less a catchall for a host of static methods
+	that could just as easily be generally pure functions.
 
 	I'll decide whether or not I want to change this later.
 */
@@ -72,6 +75,11 @@ func (_ *rt) EMPTY_ARRAY() []interface{} {
 
 var RT = rt{} // Mock static methods
 
+// Overloaded with optional init argument.
+func (_ *rt) Var(ns string, name string, init interface{}) *Var {
+	return InternVar(FindOrCreateNamespace(InternSymbolByNsname(ns)), InternSymbolByNsname(name), init)
+}
+
 func (_ *rt) Map(init... interface{}) IPersistentMap {
 	if init == nil {
 		return EMPTY_PERSISTENT_ARRAY_MAP
@@ -95,7 +103,7 @@ func (_ *rt) IsReduced(r interface{}) bool {
 func (_ *rt) Seq(coll interface{}) ISeq {
 	// TODO: This definitely doesn't work at the moment
 	switch c := coll.(type) {
-	case *ASeq:
+	case ASeq:
 		return c
 	case LazySeq:
 		return c.Seq()
@@ -156,6 +164,14 @@ func (_ *rt) Print(x interface{}, w *bufio.Writer) {
 
 	switch obj := x.(type) {
 	// MORE STUFF
+	case ISeq:
+		w.WriteRune('(')
+		RT.printInnerSeq(RT.Seq(x), w)
+		w.WriteRune(')')
+	case IPersistentList:
+		w.WriteRune('(')
+		RT.printInnerSeq(RT.Seq(x), w)
+		w.WriteRune(')')
 	case IPersistentMap:
 		w.WriteRune('{')
 		for s := RT.Seq(obj); s != nil; s = s.Next() {
@@ -177,6 +193,14 @@ func (_ *rt) Print(x interface{}, w *bufio.Writer) {
 
 }
 
+func (_ *rt) printInnerSeq(x ISeq, w *bufio.Writer) {
+	for s := x; s != nil; s = s.Next() {
+		RT.Print(s.First(), w)
+		if s.Next() != nil {
+			w.WriteRune(' ')
+		}
+	}
+}
 
 
 // TODO

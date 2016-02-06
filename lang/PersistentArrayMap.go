@@ -254,17 +254,17 @@ func equalKey(k1 interface{}, k2 interface{}) bool {
 
 // TODO: As always, not sure about this
 func (m *PersistentArrayMap) Iterator() *Iterator {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (m *PersistentArrayMap) KeyIterator() *Iterator {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (m *PersistentArrayMap) ValIterator() *Iterator {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 func (m *PersistentArrayMap) Seq() ISeq {
@@ -327,8 +327,6 @@ func (m *PersistentArrayMap) HashEq() int{
 
 // NOTE: In JVM Clojure, this is a nested class: PersistentArrayMap.Seq
 type PersistentArrayMapSeq struct {
-	ASeq
-
 	_meta IPersistentMap
 	array []interface{}
 	i     int
@@ -358,6 +356,46 @@ func (ms *PersistentArrayMapSeq) WithMeta(meta IPersistentMap) interface{} {
 		array: ms.array,
 		i:     ms.i,
 	}
+}
+
+/*
+	Abstract methods (PersistentArrayMapSeq)
+ */
+
+func (ms *PersistentArrayMapSeq) Cons(o interface{}) IPersistentCollection {
+	return ASeq_Cons(ms, o)
+}
+
+func (ms *PersistentArrayMapSeq) Empty() IPersistentCollection {
+	return ASeq_Empty(ms)
+}
+
+func (ms *PersistentArrayMapSeq) Equals(o interface{}) bool {
+	return ASeq_Equals(ms, o)
+}
+
+func (ms *PersistentArrayMapSeq) Equiv(o interface{}) bool {
+	return ASeq_Equiv(ms, o)
+}
+
+func (ms *PersistentArrayMapSeq) HashCode() int {
+	return ASeq_HashCode(ms)
+}
+
+func (ms *PersistentArrayMapSeq) HashEq() int {
+	return ASeq_HashEq(ms)
+}
+
+func (ms *PersistentArrayMapSeq) More() ISeq {
+	return ASeq_More(ms)
+}
+
+func (ms *PersistentArrayMapSeq) Seq() ISeq {
+	return ASeq_Seq(ms)
+}
+
+func (ms *PersistentArrayMapSeq) String() string {
+	return ASeq_String(ms)
 }
 
 /*

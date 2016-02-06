@@ -1,3 +1,48 @@
+2016-02-05
+----------
+* I've been wondering for a long time how `clojure.core` actually gets loaded, since I couldn't
+ find anywhere obvious in `clojure.main` where it happens. The magical secret sauce is in
+ RT.doInit(), where we see `load("clojure.core")` -- RT.doInit() is in turn triggered by RT's
+ `static` section. All of this could probably just go in RT's `init()` method.
+
+2016-02-04
+----------
+* Additional notes to follow up on last night's - after extensive thought I don't see a better path
+ forward than using the context package or rolling something similar myself. I think the various
+ thread-local storage packages that exist in the OSS world are generally frowned upon and I'm wary
+ of going down any path that wouldn't be likely to have compiler and runtime support in the long run. 
+ 
+ This brings us to the question of how actually to implement things. I think the place to start here
+ will be to begin by adding an additional `ctx` argument to all functions that will be a pointer to
+ a `context`. If the pointer is nil, then that should serve as an appropriate proxy for the JVM's 
+ AtomicBoolean `threadBound` field.
+  
+ The obvious place to begin adding this is any function that otherwise would have relied upon
+ `threadBound` or `dvals`. We can propogate the appropriate function signature upwards from there. 
+ I have no idea how much refactoring is going to be involved in this, but my suspicion is that it
+ will be significant.
+ 
+ On the up side, thread locals don't get much use in the compiler otherwise (Agents are the next
+ thing I have to worry about, and I'm not going to pay too much attention to them for now). 
+
+2016-02-03
+----------
+* This evening I really spent a few hours considering the different concurrency models of JVM Clojure
+ that I'm going to need to adapt or modify to get to work idiomatically (slash, at all) in Go. For
+ a while I was worried about getting namespaces to work well, but I think those will work fine in the
+ short term with a simple mutex on a map. More difficult, I think, is the question of vars, which 
+ depend in JVM Clojure on ThreadLocals. 
+ 
+ I'm still reasoning my way through the necessary properties of vars and their storage patterns. At
+ the moment the two "obvious" paths I could go down are ones in which subsequent storage contexts are
+ propogated and then locally stored in structs or channels, or in which I use the x/net/context
+ package to do something similar. Either way, the functional interface will be very different, I think.
+
+2016-02-02
+----------
+* Henceforth I'm going to tag parts of the codebase that seem like un-necessary JVM cruft with
+ a hashtag note, `#VESTIGIAL`
+
 2016-01-31
 ----------
 * Sentinel values are a pain in the ass and just bit me hard. I might end up creating a special
@@ -24,8 +69,8 @@
 * Right now there are various interface methods that I've chosen to have default to the least-specific
  common denominator. For instance, ITransientAssociative forces implementing structs to default to always
  provide ITransientCollection, even though individual sub-interfaces in JVM Clojure require the return
- value to be, e.g. ITransientMap or ITransientVector. I think this approach is fine for now and can always
- be refactored later. `Conj`, `Assoc`, `Persistent` are particularly guilty culprits here.
+ value to be, e.g. ITransientMap or ITransientVector. I think this approach is fine for now and can 
+ always be refactored later. `Conj`, `Assoc`, `Persistent` are particularly guilty culprits here.
 
 2016-01-24
 ----------

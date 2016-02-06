@@ -78,15 +78,14 @@ func (s *Symbol) Equals(obj interface{}) bool {
 		return true
 	}
 	switch obj.(type) {
-	case Symbol:
-		// continue
+	case *Symbol:
+	//continue
 	default:
 		return false
 	}
 
-	symbol := obj.(Symbol)
-	// TODO: This should actually be a function in Utils.
-	return s.ns == symbol.ns && s.name == symbol.name
+	symbol := obj.(*Symbol)
+	return Util.Equals(s.ns, symbol.ns) && Util.Equals(s.name, symbol.name)
 }
 
 func (s *Symbol) HashCode() int {

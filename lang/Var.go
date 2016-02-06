@@ -8,6 +8,8 @@ import (
 
 /*
 	Assorted class variables
+
+
 */
 
 // TODO: I found this really useful: http://www.golangbootcamp.com/book/concurrency
@@ -119,6 +121,7 @@ func CreateVarFromNothing() *Var {
 }
 
 func CreateVarFromRoot(root interface{}) *Var {
+	panic(NotYetImplementedException)
 	return &Var{
 		// TODO
 	}
@@ -126,12 +129,12 @@ func CreateVarFromRoot(root interface{}) *Var {
 
 func (v *Var) isBound() bool {
 	// TODO
-	return false
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (v *Var) Get() interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO: this is a naive and stupid implementation
@@ -141,17 +144,17 @@ func (v *Var) Deref() interface{} {
 
 // TODO
 func (v *Var) SetValidator(vf IFn) {
-
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (v *Var) Alter(fn IFn, args ISeq) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func (v *Var) Set(val interface{}) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 func (v *Var) doSet(val interface{}) interface{} {
@@ -210,6 +213,26 @@ func (v *Var) BindRoot(root interface{}) {
 	v.root = root
 }
 
+func (v *Var) Fn() IFn {
+	return v.Deref().(IFn)
+}
+
+func (v *Var) Call() interface{} {
+	return v.Invoke()
+}
+
+func (v *Var) Run() {
+	v.Invoke()
+}
+
+func (v *Var) Invoke(args ...interface{}) interface{} {
+	return v.Fn().Invoke(args...)
+}
+
+func (v *Var) ApplyTo(arglist ISeq) interface{} {
+	return AFn_ApplyToHelper(v, arglist)
+}
+
 /*
 	VarTBox [TBox]
 */
@@ -262,9 +285,9 @@ func (f *Frame) Clone() interface{} {
 }
 
 /*
-	VarFrameDvals [dvals](anonymous class)
+	VarFrameDvals
 
-	This anonymous class is just a ThreadLocal<Frame> in JVM Clojure with an initialiValue() func.
+	This class is just a ThreadLocal<Frame> in JVM Clojure with an initialValue() func.
 */
 
 type VarFrameDvals struct {

@@ -59,7 +59,7 @@ func APersistentVector_RSeq(a APersistentVector) ISeq {
 
 // TODO
 func APersistentVector_CompareTo(a APersistentVector, o interface{}) int {
-	return 0
+	panic(NotYetImplementedException)
 }
 
 func APersistentVector_doEquals(v IPersistentVector, i interface{}) bool {
@@ -82,7 +82,7 @@ func APersistentVector_doEquals(v IPersistentVector, i interface{}) bool {
 
 // TODO
 func APersistentVector_doEquiv(v IPersistentVector, i interface{}) bool {
-	return true
+	panic(NotYetImplementedException)
 }
 
 func APersistentVector_Equals(a APersistentVector, i interface{}) bool {
@@ -101,12 +101,12 @@ func APersistentVector_Equiv(a APersistentVector, i interface{}) bool {
 
 // TODO
 func APersistentVector_HashCode(a APersistentVector) int {
-	return 0
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func APersistentVector_HashEq(a APersistentVector) int {
-	return 0
+	panic(NotYetImplementedException)
 }
 
 func APersistentVector_Length(a APersistentVector) int {
@@ -131,7 +131,7 @@ func APersistentVector_IndexOf(a APersistentVector, o interface{}) int {
 
 // TODO
 func APersistentVector_LastIndexOf(a APersistentVector, i interface{}) int {
-	return 0
+	panic(NotYetImplementedException)
 }
 
 // TODO
@@ -150,12 +150,12 @@ func (a *APersistentVector) SubList(fromIndex int, toIndex int) List {
 
 // TODO
 func APersistentVector_Invoke(a APersistentVector, arg1 interface{}) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // TODO
 func APersistentVector_Iterator(a APersistentVector) *Iterator {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 func APersistentVector_Peek(a APersistentVector) interface{} {
@@ -167,7 +167,7 @@ func APersistentVector_Peek(a APersistentVector) interface{} {
 
 // TODO
 func APersistentVector_ContainsKey(a APersistentVector, key interface{}) bool {
-	return true
+	panic(NotYetImplementedException)
 }
 
 func APersistentVector_EntryAt(a APersistentVector, key interface{}) IMapEntry {
@@ -182,7 +182,7 @@ func APersistentVector_EntryAt(a APersistentVector, key interface{}) IMapEntry {
 
 // TODO
 func APersistentVector_Assoc(a APersistentVector, key interface{}, val interface{}) Associative {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 func APersistentVector_AssocN(a APersistentVector, i int, val interface{}) IPersistentVector {
@@ -191,7 +191,7 @@ func APersistentVector_AssocN(a APersistentVector, i int, val interface{}) IPers
 
 // TODO
 func APersistentVector_ValAt(a APersistentVector, key interface{}, notFound interface{}) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
 // NOTE: There's a note in here about everything else here being "java.util.Collection implementation"
@@ -209,11 +209,15 @@ func APersistentVector_ToArray(a APersistentVector) []interface{} {
 // 	panic(UnsupportedOperationException)
 // }
 
-// Declaration block: PersistentVectorSeq
+/*
+	APersistentVectorSeq
+
+	Extends abstract class ASeq
+
+	Implements: IndexedSeq, Counted
+ */
 
 type APersistentVectorSeq struct {
-	*ASeq
-
 	_meta IPersistentMap
 	v     IPersistentVector
 	i     int
@@ -251,13 +255,59 @@ func (s *APersistentVectorSeq) WithMeta(meta IPersistentMap) *APersistentVectorS
 
 // TODO
 func (s *APersistentVectorSeq) Reduce(f IFn, start interface{}) interface{} {
-	return nil
+	panic(NotYetImplementedException)
 }
 
-// NOTE: Implements IndexedSeq, Counted
-type APersistentVectorRSeq struct {
-	*ASeq
+/*
+	Abstract methods (APersistentVectorSeq)
+ */
 
+func (s *APersistentVectorSeq) Cons(o interface{}) IPersistentCollection {
+	return ASeq_Cons(s, o)
+}
+
+func (s *APersistentVectorSeq) Empty() IPersistentCollection {
+	return ASeq_Empty(s)
+}
+
+func (s *APersistentVectorSeq) Equals(o interface{}) bool {
+	return ASeq_Equals(s, o)
+}
+
+func (s *APersistentVectorSeq) Equiv(o interface{}) bool {
+	return ASeq_Equiv(s, o)
+}
+
+func (s *APersistentVectorSeq) HashCode() int {
+	return ASeq_HashCode(s)
+}
+
+func (s *APersistentVectorSeq) HashEq() int {
+	return ASeq_HashEq(s)
+}
+
+func (s *APersistentVectorSeq) More() ISeq {
+	return ASeq_More(s)
+}
+
+func (s *APersistentVectorSeq) Seq() ISeq {
+	return ASeq_Seq(s)
+}
+
+func (s *APersistentVectorSeq) String() string {
+	return ASeq_String(s)
+}
+
+
+/*
+	APersistentVectorRSeq
+
+	Extends abstract class ASeq
+
+	Implements IndexedSeq, Counted
+ */
+
+type APersistentVectorRSeq struct {
 	_meta IPersistentMap
 	v     IPersistentVector
 	i     int
@@ -291,6 +341,46 @@ func (r *APersistentVectorRSeq) WithMeta(meta IPersistentMap) *APersistentVector
 		v:     r.v,
 		i:     r.i,
 	}
+}
+
+/*
+	Abstract methods (APersistentVectorRSeq)
+ */
+
+func (s *APersistentVectorRSeq) Cons(o interface{}) IPersistentCollection {
+	return ASeq_Cons(s, o)
+}
+
+func (s *APersistentVectorRSeq) Empty() IPersistentCollection {
+	return ASeq_Empty(s)
+}
+
+func (s *APersistentVectorRSeq) Equals(o interface{}) bool {
+	return ASeq_Equals(s, o)
+}
+
+func (s *APersistentVectorRSeq) Equiv(o interface{}) bool {
+	return ASeq_Equiv(s, o)
+}
+
+func (s *APersistentVectorRSeq) HashCode() int {
+	return ASeq_HashCode(s)
+}
+
+func (s *APersistentVectorRSeq) HashEq() int {
+	return ASeq_HashEq(s)
+}
+
+func (s *APersistentVectorRSeq) More() ISeq {
+	return ASeq_More(s)
+}
+
+func (s *APersistentVectorRSeq) Seq() ISeq {
+	return ASeq_Seq(s)
+}
+
+func (s *APersistentVectorRSeq) String() string {
+	return ASeq_String(s)
 }
 
 /*

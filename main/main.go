@@ -1,18 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"glojure/go/lang"
-	// "murmur3"
+	"glojure/lang"
+	"os"
 )
 
+var CLOJURE_MAIN *lang.Symbol = lang.InternSymbolByNsname("clojure.main")
+var REQUIRE *lang.Var = lang.RT.Var("clojure.core", "require")
+var MAIN *lang.Var = lang.RT.Var("clojure.main", "main")
+
 func main() {
-	v := lang.CreateVector(1, 2)
-	// fmt.Println(v.String())
-	// y := v.Cons(3).(*lang.PersistentVector)
-	z := v.AssocN(0, "other").(*lang.PersistentVector)
-	fmt.Println(z)
-
-	fmt.Println(lang.HashString("bananas in pajamas"))
-
+	REQUIRE.Invoke(CLOJURE_MAIN)
+	MAIN.ApplyTo(lang.RT.Seq(os.Args...))
 }
