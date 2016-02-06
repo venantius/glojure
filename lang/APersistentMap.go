@@ -210,11 +210,11 @@ func APersistentMap_Without(a APersistentMap, key interface{}) IPersistentMap {
 
 /*
 	KeySeq
+
+	Implements abstract class ASeq
 */
 
 type KeySeq struct {
-	ASeq
-
 	_meta    IPersistentMap
 	seq      ISeq
 	iterable Iterable // TODO: fuck
@@ -265,6 +265,51 @@ func (k *KeySeq) WithMeta(meta IPersistentMap) *KeySeq {
 func (k *KeySeq) Iterator() *Iterator {
 	return nil
 }
+
+/*
+	Abstract methods (KeySeq)
+ */
+
+func (k *KeySeq) Cons(i interface{}) IPersistentCollection {
+	return ASeq_Cons(k, i)
+}
+
+func (k *KeySeq) Count() int {
+	return ASeq_Count(k)
+}
+
+func (k *KeySeq) Empty() IPersistentCollection {
+	return ASeq_Empty(k)
+}
+
+func (k *KeySeq) Equals(o interface{}) bool {
+	return ASeq_Equals(k, o)
+}
+
+func (k *KeySeq) Equiv(o interface{}) bool {
+	return ASeq_Equiv(k, o)
+}
+
+func (k *KeySeq) HashCode() int {
+	return ASeq_HashCode(k)
+}
+
+func (k *KeySeq) HashEq() int {
+	return ASeq_HashEq(k)
+}
+
+func (k *KeySeq) More() ISeq {
+	return ASeq_More(k)
+}
+
+func (k *KeySeq) Seq() ISeq {
+	return ASeq_Seq(k)
+}
+
+func (k *KeySeq) String() string {
+	return ASeq_String(k)
+}
+
 
 /*
 	ValSeq

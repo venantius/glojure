@@ -572,11 +572,11 @@ func (n *ArrayNode) WithoutWithEdit(edit bool, shift int, hash int, key interfac
 
 /*
 	ArrayNodeSeq
+
+	Extends abstract class ASeq
 */
 
 type ArrayNodeSeq struct {
-	ASeq
-
 	_meta IPersistentMap
 	nodes []INode
 	i     int
@@ -623,6 +623,50 @@ func (s *ArrayNodeSeq) First() interface{} {
 
 func (s *ArrayNodeSeq) Next() ISeq {
 	return CreateArrayNodeSeq(nil, s.nodes, s.i, s.s.Next())
+}
+
+/*
+	Abstract methods (ArrayNodeSeq)
+ */
+
+func (s *ArrayNodeSeq) Cons(o interface{}) IPersistentCollection {
+	return ASeq_Cons(s, o)
+}
+
+func (s *ArrayNodeSeq) Count() int {
+	return ASeq_Count(s)
+}
+
+func (s *ArrayNodeSeq) Empty() IPersistentCollection {
+	return ASeq_Empty(s)
+}
+
+func (s *ArrayNodeSeq) Equals(o interface{}) bool {
+	return ASeq_Equals(s, o)
+}
+
+func (s *ArrayNodeSeq) Equiv(o interface{}) bool {
+	return ASeq_Equiv(s, o)
+}
+
+func (s *ArrayNodeSeq) HashCode() int {
+	return ASeq_HashCode(s)
+}
+
+func (s *ArrayNodeSeq) HashEq() int {
+	return ASeq_HashEq(s)
+}
+
+func (s *ArrayNodeSeq) More() ISeq {
+	return ASeq_More(s)
+}
+
+func (s *ArrayNodeSeq) Seq() ISeq {
+	return ASeq_Seq(s)
+}
+
+func (s *ArrayNodeSeq) String() string {
+	return ASeq_String(s)
 }
 
 /*
@@ -853,11 +897,11 @@ func (n *NodeIter) Remove() {
 
 /*
 	NodeSeq
+
+	Extends abstract class ASeq
 */
 
 type NodeSeq struct {
-	ASeq
-
 	_meta IPersistentMap
 	array []interface{}
 	i     int
@@ -931,6 +975,50 @@ func (s *NodeSeq) Next() ISeq {
 		return createNodeSeq(s.array, s.i, s.s.Next())
 	}
 	return createNodeSeq(s.array, s.i + 2, nil)
+}
+
+/*
+	Abstract methods (NodeSeq)
+ */
+
+func (s *NodeSeq) Cons(o interface{}) IPersistentCollection {
+	return ASeq_Cons(s, o)
+}
+
+func (s *NodeSeq) Count() int {
+	return ASeq_Count(s)
+}
+
+func (s *NodeSeq) Empty() IPersistentCollection {
+	return ASeq_Empty(s)
+}
+
+func (s *NodeSeq) Equals(o interface{}) bool {
+	return ASeq_Equals(s, o)
+}
+
+func (s *NodeSeq) Equiv(o interface{}) bool {
+	return ASeq_Equiv(s, o)
+}
+
+func (s *NodeSeq) HashCode() int {
+	return ASeq_HashCode(s)
+}
+
+func (s *NodeSeq) HashEq() int {
+	return ASeq_HashEq(s)
+}
+
+func (s *NodeSeq) More() ISeq {
+	return ASeq_More(s)
+}
+
+func (s *NodeSeq) Seq() ISeq {
+	return ASeq_Seq(s)
+}
+
+func (s *NodeSeq) String() string {
+	return ASeq_String(s)
 }
 
 /*

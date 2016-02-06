@@ -2,7 +2,6 @@ package lang
 
 import (
 	"container/list" // linked list
-	"fmt"
 )
 
 /* Declaration block: Primordial */
@@ -59,9 +58,13 @@ func (p *Primordial) Meta() IPersistentMap {
 	return nil
 }
 
-/* Declaration block: PersistentList */
+/*
+  	PersistentList
 
-// NOTE: Implements IPersistentList, IReduce, List, Counted
+	Implements: IPersistentList, IReduce, List, Counted
+*/
+
+
 type PersistentList struct {
 	_meta IPersistentMap // Inherited from Obj -> ASeq
 
@@ -81,8 +84,6 @@ func CreatePersistentList(init *list.List) IPersistentList {
 func CreatePersistentListFromInterfaceSlice(init []interface{}) IPersistentList {
 	var ret IPersistentList = EMPTY_PERSISTENT_LIST
 	for i := len(init) - 1; i > -1; i-- {
-		fmt.Println(i)
-		fmt.Println(init)
 		ret = ret.Cons(init[i]).(IPersistentList)
 	}
 	return ret
@@ -173,12 +174,19 @@ func (l *PersistentList) Reduce(f IFn) interface{} {
  */
 
 func (l *PersistentList) Equals(o interface{}) bool {
-
-	panic(NotYetImplementedException)
+	return ASeq_Equals(l, o)
 }
 
 func (l *PersistentList) Equiv(o interface{}) bool {
 	panic(NotYetImplementedException)
+}
+
+func (l *PersistentList) HashCode() int {
+	return ASeq_HashCode(l)
+}
+
+func (l *PersistentList) HashEq() int {
+	return ASeq_HashEq(l)
 }
 
 func (l *PersistentList) Seq() ISeq {
@@ -187,6 +195,10 @@ func (l *PersistentList) Seq() ISeq {
 
 func (l *PersistentList) More() ISeq {
 	panic(NotYetImplementedException)
+}
+
+func (l *PersistentList) String() string {
+	return ASeq_String(l)
 }
 
 /*

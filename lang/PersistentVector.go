@@ -503,11 +503,12 @@ func (v *PersistentVector) ValAt(key interface{}, notFound interface{}) interfac
 /*
 	ChunkedSeq
 
+	Extends abstract class ASeq
+
 	Implements: IChunkedSeq, Counted
  */
 
 type ChunkedSeq struct {
-	ASeq
 	_hash   int
 	_hasheq int
 
@@ -573,6 +574,53 @@ func (c *ChunkedSeq) Next() ISeq {
 func (c *ChunkedSeq) Count() int {
 	return c.vec.cnt - (c.i + c.offset)
 }
+
+/*
+	Abstract methods (ChunkedSeq)
+ */
+
+
+func (s *ChunkedSeq) Cons(o interface{}) IPersistentCollection {
+	return ASeq_Cons(s, o)
+}
+
+func (s *ChunkedSeq) Empty() IPersistentCollection {
+	return ASeq_Empty(s)
+}
+
+func (s *ChunkedSeq) Equals(o interface{}) bool {
+	return ASeq_Equals(s, o)
+}
+
+func (s *ChunkedSeq) Equiv(o interface{}) bool {
+	return ASeq_Equiv(s, o)
+}
+
+func (s *ChunkedSeq) HashCode() int {
+	return ASeq_HashCode(s)
+}
+
+func (s *ChunkedSeq) HashEq() int {
+	return ASeq_HashEq(s)
+}
+
+func (s *ChunkedSeq) More() ISeq {
+	return ASeq_More(s)
+}
+
+func (s *ChunkedSeq) Seq() ISeq {
+	return ASeq_Seq(s)
+}
+
+func (s *ChunkedSeq) String() string {
+	return ASeq_String(s)
+}
+
+
+
+
+
+// Back to persistentvectormethods
 
 // Empty the vector's contents.
 func (v *PersistentVector) Empty() IPersistentCollection {

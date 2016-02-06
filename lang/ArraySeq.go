@@ -1,9 +1,14 @@
 package lang
 
-// NOTE: Implements IndexedSeq, IReduce
-type ArraySeq struct {
-	ASeq
+/*
+	ArraySeq
 
+	Extends abstract class ASeq
+
+	Implements: IndexedSeq, IReduce
+ */
+
+type ArraySeq struct {
 	_meta IPersistentMap
 	array []interface{}
 	i     int
@@ -64,6 +69,46 @@ func (a *ArraySeq) WithMeta(meta IPersistentMap) *ArraySeq {
 // TODO
 func (a *ArraySeq) Reduce(f IFn, start interface{}) interface{} {
 	return nil
+}
+
+/*
+	Abstract methods (ArraySeq)
+ */
+
+func (s *ArraySeq) Cons(o interface{}) IPersistentCollection {
+	return ASeq_Cons(s, o)
+}
+
+func (s *ArraySeq) Empty() IPersistentCollection {
+	return ASeq_Empty(s)
+}
+
+func (s *ArraySeq) Equals(o interface{}) bool {
+	return ASeq_Equals(s, o)
+}
+
+func (s *ArraySeq) Equiv(o interface{}) bool {
+	return ASeq_Equiv(s, o)
+}
+
+func (s *ArraySeq) HashCode() int {
+	return ASeq_HashCode(s)
+}
+
+func (s *ArraySeq) HashEq() int {
+	return ASeq_HashEq(s)
+}
+
+func (s *ArraySeq) More() ISeq {
+	return ASeq_More(s)
+}
+
+func (s *ArraySeq) Seq() ISeq {
+	return ASeq_Seq(s)
+}
+
+func (s *ArraySeq) String() string {
+	return ASeq_String(s)
 }
 
 // TODO: There is a fuck ton more stuff in this class that I haven't implmemented.

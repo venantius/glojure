@@ -1,21 +1,29 @@
 package lang
-import "container/list"
+import (
+	"container/list"
+
+)
 
 // NOTE: Implements ISeq, Sequential, List, Serializable, IHashEq
-type ASeq struct {
-	_hash   int
-	_hasheq int
+type ASeq interface {
+	ISeq
+
+	Equals(i interface{}) bool
+	HashCode() int
+	HashEq() int
+	String() string
+
 }
 
-func (s *ASeq) String() string {
+func ASeq_String(s ASeq) string {
 	return RT.PrintString(s)
 }
 
-func (s *ASeq) Empty() IPersistentCollection {
+func ASeq_Empty(s ASeq) IPersistentCollection {
 	return EMPTY_PERSISTENT_LIST
 }
 
-func (s *ASeq) Equiv(i interface{}) bool {
+func ASeq_Equiv(s ASeq, i interface{}) bool {
 	var b bool
 	switch i.(type) {
 	case Sequential:
@@ -42,11 +50,14 @@ func ASeq_Equals(s ASeq, obj interface{}) bool {
 	}
 	switch o := obj.(type) {
 	case Sequential:
-		// do nothing
+		if o == 1 {
+			// do nothing
+		}
+	// do nothing
 	case []interface{}:
-		// not sure about this, but we'll see.
+	// not sure about this, but we'll see.
 	case list.List:
-		// not sure about this either
+	// not sure about this either
 	default:
 		return false
 	}
@@ -62,43 +73,32 @@ func ASeq_Equals(s ASeq, obj interface{}) bool {
 
 
 //TODO
-func (s *ASeq) HashCode() int {
+func ASeq_HashCode(s ASeq) int {
 	panic(NotYetImplementedException)
 }
 
 // TODO
-func (s *ASeq) HashEq() int {
+func ASeq_HashEq(s ASeq) int {
 	panic(NotYetImplementedException)
 }
 
 // TODO
-func (s *ASeq) Count() int {
+func ASeq_Count(s ASeq) int {
 	panic(NotYetImplementedException)
 }
 
 func ASeq_Seq(s ASeq) ISeq {
-	return s
+	return s.(ISeq)
 }
 
-func (s *ASeq) Cons(i interface{}) IPersistentCollection {
+func ASeq_Cons(s ASeq, i interface{}) IPersistentCollection {
 	return &Cons{_first: i, _more: s}
 }
 
 // TODO: Implement
-func (s *ASeq) More() ISeq {
+func ASeq_More(s ASeq) ISeq {
 	panic(NotYetImplementedException)
 }
 
-/*
-	Abstract methods below here.
-*/
-
-func (s *ASeq) Next() ISeq {
-	panic(AbstractClassMethodException)
-}
-
-func (s *ASeq) First() interface{} {
-	panic(AbstractClassMethodException)
-}
 
 // TODO: The rest of this file. In particular there is java.util.Collection stuff, and....idk.
